@@ -1,22 +1,31 @@
 import React, {useState} from 'react';
-import {View, StyleSheet, Image, Text, ScrollView} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Image,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
-import RNSwitch from '../components/RNSwitch';
+import RNSwitch from '../Components/RNSwitch';
 import ArrowDroite from '../icones/ArrowDroite.svg';
 import ArrowDown from '../icones/ArrowDown.svg';
 import ArrowAwjaOrange from '../icones/ArrowAwjaOrange.svg';
 import ArrowAwjaMauve from '../icones/ArrowAwjaMauve.svg';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
-
-export default function App() {
-  const [isEnabled, setIsEnabled] = useState(false);
+import {useNavigation} from '@react-navigation/native';
+import data from '../Components/data';
+const HomeScreen = () => {
+  const navigation = useNavigation();
+  const [isArrosageEnabled, setIsArrosageEnabled] = useState(false);
+  const [isAirConditionerEnabled, setIsAirConditionerEnabled] = useState(false);
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{gap: 10}}>
-      {' '}
       <View style={styles.Bento1}>
         <View style={styles.Bento1Left}>
           <View style={styles.Bento1LeftTop}>
@@ -34,19 +43,10 @@ export default function App() {
         </View>
         <View style={styles.Bento1Right}>
           <View style={styles.Bento1RightTop}>
-            <View style={styles.TransparentIconeGreen}>
-              {/* <Image
-                source={require('../icones/faucet.png')}
-                style={styles.imageTransparentIconeGreen}
-              /> */}
-            </View>
+            <View style={styles.TransparentIconeGreen}></View>
           </View>
           <View style={styles.GreenText}>
-            <Text
-              style={{
-                fontSize: 18,
-                fontFamily: 'Poppins-SemiBold',
-              }}>
+            <Text style={{fontSize: 18, fontFamily: 'Poppins-SemiBold'}}>
               Arrosage
             </Text>
             <Text
@@ -58,11 +58,10 @@ export default function App() {
               1h System on
             </Text>
           </View>
-
           <View style={styles.SwintchContainer}>
             <RNSwitch
-              value={isEnabled}
-              handleOnPress={setIsEnabled}
+              value={isArrosageEnabled}
+              handleOnPress={() => setIsArrosageEnabled(!isArrosageEnabled)}
               activeTrackColor="#9DE607"
               inActiveTrackColor="gray"
               thumbColor="white"
@@ -71,24 +70,27 @@ export default function App() {
         </View>
       </View>
       <View style={styles.Bento2Container}>
-        <View style={styles.Bento2}>
+        <TouchableOpacity
+          style={styles.Bento2}
+          onPress={() => navigation.navigate('Graph', {data: data})}>
           <View style={styles.Bento2Left}>
-            <Text
-              style={{
-                fontFamily: 'Poppins-SemiBold',
-                fontSize: 25,
-              }}>
+            <Text style={{fontFamily: 'Poppins-SemiBold', fontSize: 25}}>
               Air Conditioner
             </Text>
+
             <Text style={{fontFamily: 'Poppins-Bold', fontSize: 55}}>28°C</Text>
+
             <RNSwitch
-              value={isEnabled}
-              handleOnPress={setIsEnabled}
+              value={isAirConditionerEnabled}
+              handleOnPress={() =>
+                setIsAirConditionerEnabled(!isAirConditionerEnabled)
+              }
               activeTrackColor="green"
               inActiveTrackColor="gray"
               thumbColor="white"
             />
           </View>
+
           <View style={styles.Bento2Right}>
             <View style={{...styles.BtnArrowDroit, backgroundColor: 'black'}}>
               <ArrowDroite />
@@ -97,7 +99,7 @@ export default function App() {
               <ArrowDown color="white" />
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
       <View style={styles.Bento3}>
         <View style={styles.Bento3Left}>
@@ -151,7 +153,6 @@ export default function App() {
               11 °F
             </Text>
           </View>
-
           <View
             style={{
               ...styles.BtnArrowDroit,
@@ -196,7 +197,7 @@ export default function App() {
           <View style={styles.Bento4RightTop}>
             <View
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
-              <FontAwesome name="tint" size={30} color="#F9865B" />{' '}
+              <FontAwesome name="tint" size={30} color="#F9865B" />
             </View>
             <View
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
@@ -226,7 +227,7 @@ export default function App() {
       </View>
     </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -259,8 +260,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: 10,
     paddingRight: 10,
-    // paddingTop: 12,
-    // paddingBottom: 12,
   },
   imageBento1LeftTop: {
     resizeMode: 'cover',
@@ -438,3 +437,4 @@ const styles = StyleSheet.create({
     paddingBottom: 23,
   },
 });
+export default HomeScreen;
