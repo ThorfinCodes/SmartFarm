@@ -11,8 +11,8 @@ import {mixPath, useVector} from 'react-native-redash';
 import * as shape from 'd3-shape';
 import {scaleLinear} from 'd3-scale';
 import {parse} from 'react-native-redash';
-import Header from '../Components/Header';
-import Cursor from '../Components/Cursor';
+import Header from '../components/Header';
+import Cursor from '../components/Cursor';
 import {useRoute} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
