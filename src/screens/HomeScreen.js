@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import RNSwitch from '../components/RNSwitch';
 import ArrowDroite from '../icones/ArrowDroite.svg';
 import ArrowDown from '../icones/ArrowDown.svg';
@@ -51,7 +51,12 @@ const HomeScreen = () => {
           }
           style={styles.Bento1Right}>
           <View style={styles.Bento1RightTop}>
-            <View style={styles.TransparentIconeGreen}></View>
+            <View style={styles.TransparentIconeGreen}>
+              <Image
+                source={require('../icones/faucet.png')}
+                style={styles.faucet}
+              />
+            </View>
           </View>
           <View style={styles.GreenText}>
             <Text style={{fontSize: 18, fontFamily: 'Poppins-SemiBold'}}>
@@ -119,7 +124,7 @@ const HomeScreen = () => {
           <View style={styles.Bento3LeftTop}>
             <View
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
-              <FontAwesome name="temperature-low" size={30} color="#8000FF" />
+              <FontAwesome5 name="temperature-low" size={30} color="#8000FF" />
             </View>
             <TouchableOpacity
               onPress={() =>
@@ -341,11 +346,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   imageTransparentIconeGreen: {
     width: '100%', // Prend toute la largeur du parent
     height: '100%', // Prend toute la hauteur du parent
     resizeMode: 'contain', // S'assure que l'image est contenue dans la div
     transform: [{scale: 0.6}], // Réduit la taille à 80%
+  },
+  faucet: {
+    width: 50,
+    height: 50,
   },
   GreenText: {
     paddingLeft: 12,
