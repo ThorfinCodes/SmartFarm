@@ -17,6 +17,7 @@ import ArrowAwjaMauve from '../icones/ArrowAwjaMauve.svg';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation} from '@react-navigation/native';
 import data from '../components/data';
+
 const HomeScreen = () => {
   const navigation = useNavigation();
   const [isArrosageEnabled, setIsArrosageEnabled] = useState(false);
