@@ -9,14 +9,14 @@ import {
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
-import RNSwitch from '../Components/RNSwitch';
+import RNSwitch from '../components/RNSwitch';
 import ArrowDroite from '../icones/ArrowDroite.svg';
 import ArrowDown from '../icones/ArrowDown.svg';
 import ArrowAwjaOrange from '../icones/ArrowAwjaOrange.svg';
 import ArrowAwjaMauve from '../icones/ArrowAwjaMauve.svg';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation} from '@react-navigation/native';
-import data from '../Components/data';
+import data from '../components/data';
 const HomeScreen = () => {
   const navigation = useNavigation();
   const [isArrosageEnabled, setIsArrosageEnabled] = useState(false);
@@ -72,7 +72,12 @@ const HomeScreen = () => {
       <View style={styles.Bento2Container}>
         <TouchableOpacity
           style={styles.Bento2}
-          onPress={() => navigation.navigate('Graph', {data: data})}>
+          onPress={() =>
+            navigation.navigate('Graph', {
+              data: data,
+              text: 'Temperature',
+            })
+          }>
           <View style={styles.Bento2Left}>
             <Text style={{fontFamily: 'Poppins-SemiBold', fontSize: 25}}>
               Air Conditioner

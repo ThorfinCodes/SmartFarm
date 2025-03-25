@@ -1,23 +1,64 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
-import Animated, {
-  interpolate,
-  useAnimatedStyle,
-  useDerivedValue,
-} from 'react-native-reanimated';
-import {ReText, Vector, round} from 'react-native-redash';
+import {Image, StyleSheet, Text, View} from 'react-native';
+import {useDerivedValue} from 'react-native-reanimated';
+import {round} from 'react-native-redash';
 
-import ETH from './ETH';
-import {graphs, SIZE} from './Model';
+import {graphs} from './Model';
+
+const Header = ({title, index, sensorDetails}) => {
+  const data = useDerivedValue(() => graphs[index.value].data);
+
+  const percentChange = useDerivedValue(
+    () => `${round(data.value.percentChange, 3)}%`,
+  );
+  const label = useDerivedValue(() => data.value.label);
+
+  return (
+    <View style={styles.container}>
+      <Image
+        source={require('../images/avatar.png')}
+        style={styles.image}
+        resizeMode="contain"
+      />
+      <View style={styles.values}>
+        <View style={styles.valueContainer}>
+          <Text style={styles.value}>
+            {sensorDetails.value} {sensorDetails.unit}
+          </Text>
+          <Text style={styles.label}>{title}</Text>
+        </View>
+        <View style={styles.valueContainer}>
+          <Text
+            style={[
+              styles.value,
+              {color: data.value.percentChange > 0 ? 'green' : 'red'},
+            ]}>
+            {percentChange.value}
+          </Text>
+          <Text style={styles.label}>{label.value}</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     padding: 16,
   },
+  image: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
   values: {
-    marginTop: 16,
+    marginTop: 50,
+    marginBottom: 75,
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  valueContainer: {
+    gap: 10,
   },
   value: {
     fontWeight: '500',
@@ -27,45 +68,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
 });
-
-const Header = ({translation, index}) => {
-  const data = useDerivedValue(() => graphs[index.value].data);
-
-  const price = useDerivedValue(() => {
-    const p = interpolate(
-      translation.y.value,
-      [0, SIZE],
-      [data.value.maxPrice, data.value.minPrice],
-    );
-    return `$ ${round(p, 2).toLocaleString('en-US', {currency: 'USD'})}`;
-  });
-
-  const percentChange = useDerivedValue(
-    () => `${round(data.value.percentChange, 3)}%`,
-  );
-  const label = useDerivedValue(() => data.value.label);
-
-  const style = useAnimatedStyle(() => ({
-    fontWeight: '500',
-    fontSize: 24,
-    color: data.value.percentChange > 0 ? 'green' : 'red',
-  }));
-
-  return (
-    <View style={styles.container}>
-      <ETH />
-      <View style={styles.values}>
-        <View>
-          <ReText style={styles.value} text={price} />
-          <Text style={styles.label}>Etherum</Text>
-        </View>
-        <View>
-          <ReText style={style} text={percentChange} />
-          <ReText style={styles.label} text={label} />
-        </View>
-      </View>
-    </View>
-  );
-};
 
 export default Header;

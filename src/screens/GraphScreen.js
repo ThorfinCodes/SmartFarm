@@ -11,8 +11,8 @@ import {mixPath, useVector} from 'react-native-redash';
 import * as shape from 'd3-shape';
 import {scaleLinear} from 'd3-scale';
 import {parse} from 'react-native-redash';
-import Header from '../Components/Header';
-import Cursor from '../Components/Cursor';
+import Header from '../components/Header';
+import Cursor from '../components/Cursor';
 import {useRoute} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
@@ -22,25 +22,25 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const SELECTION_WIDTH = width - 32;
 
 const buildGraph = (datapoints, label) => {
-  const priceList = datapoints.prices.slice(0, POINTS);
+  const priceList = datapoints.values.slice(0, POINTS);
   const formattedValues = priceList.map(price => [
     parseFloat(price[0]),
     price[1],
   ]);
-  const prices = formattedValues.map(value => value[0]);
+  const values = formattedValues.map(value => value[0]);
   const dates = formattedValues.map(value => value[1]);
 
   const scaleX = scaleLinear()
     .domain([Math.min(...dates), Math.max(...dates)])
     .range([0, SIZE]);
   const scaleY = scaleLinear()
-    .domain([Math.min(...prices), Math.max(...prices)])
+    .domain([Math.min(...values), Math.max(...values)])
     .range([SIZE, 0]);
 
   return {
     label,
-    minPrice: Math.min(...prices),
-    maxPrice: Math.max(...prices),
+    minPrice: Math.min(...values),
+    maxPrice: Math.max(...values),
     percentChange: datapoints.percent_change,
     path: parse(
       shape
@@ -54,29 +54,41 @@ const buildGraph = (datapoints, label) => {
 
 const GraphScreen = () => {
   const route = useRoute();
-  const {data} = route.params;
-
+  const {data, text} = route.params;
+  const sensorData = {
+    Temperature: {name: 'Temperature', value: 23, unit: '°C'},
+    Humidity: {name: 'Humidity', value: 45, unit: '%'},
+    'CO2 Sensor': {name: 'CO2', value: 400, unit: 'ppm'},
+    'PH Sensor': {name: 'PH Level', value: 6.5, unit: ''},
+    Arrosage: {name: 'Arrosage', value: 'Active', unit: ''},
+    'Air Conditioner': {name: 'Air Conditioner', value: 'Off', unit: ''},
+  };
+  const selectedSensor = sensorData[text] || {
+    name: 'Unknown',
+    value: 'N/A',
+    unit: '',
+  };
   const graphs = [
     {
       label: '1H',
       value: 0,
-      data: buildGraph(data.data.prices.hour, 'Last Hour'),
+      data: buildGraph(data.data.values.hour, 'Last Hour'),
     },
-    {label: '1D', value: 1, data: buildGraph(data.data.prices.day, 'Today')},
+    {label: '1D', value: 1, data: buildGraph(data.data.values.day, 'Today')},
     {
       label: '1M',
       value: 2,
-      data: buildGraph(data.data.prices.month, 'Last Month'),
+      data: buildGraph(data.data.values.month, 'Last Month'),
     },
     {
       label: '1Y',
       value: 3,
-      data: buildGraph(data.data.prices.year, 'This Year'),
+      data: buildGraph(data.data.values.year, 'This Year'),
     },
     {
       label: 'all',
       value: 4,
-      data: buildGraph(data.data.prices.all, 'All Time'),
+      data: buildGraph(data.data.values.all, 'All Time'),
     },
   ];
 
@@ -98,7 +110,11 @@ const GraphScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Header translation={translation} index={current} />
+      <Header
+        title={selectedSensor.name}
+        index={current}
+        sensorDetails={selectedSensor}
+      />
       <View style={{marginTop: -50}}>
         <Svg width={SIZE} height={SIZE}>
           <AnimatedPath

@@ -8,24 +8,24 @@ import data from './data.json';
 
 export const SIZE = Dimensions.get('window').width;
 
-const values = data.data.prices;
+const values = data.data.values;
 const POINTS = 60;
 
 const buildGraph = (datapoints, label) => {
-  const priceList = datapoints.prices.slice(0, POINTS);
+  const priceList = datapoints.values.slice(0, POINTS);
   const formattedValues = priceList.map(price => [
     parseFloat(price[0]),
     price[1],
   ]);
-  const prices = formattedValues.map(value => value[0]);
+  const values = formattedValues.map(value => value[0]);
   const dates = formattedValues.map(value => value[1]);
 
   const scaleX = scaleLinear()
     .domain([Math.min(...dates), Math.max(...dates)])
     .range([0, SIZE]);
 
-  const minPrice = Math.min(...prices);
-  const maxPrice = Math.max(...prices);
+  const minPrice = Math.min(...values);
+  const maxPrice = Math.max(...values);
   const scaleY = scaleLinear().domain([minPrice, maxPrice]).range([SIZE, 0]);
 
   return {
