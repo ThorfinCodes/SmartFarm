@@ -42,7 +42,14 @@ const HomeScreen = () => {
             Welcome to the farm
           </Text>
         </View>
-        <View style={styles.Bento1Right}>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('Graph', {
+              data: data,
+              text: 'Arrosage',
+            })
+          }
+          style={styles.Bento1Right}>
           <View style={styles.Bento1RightTop}>
             <View style={styles.TransparentIconeGreen}></View>
           </View>
@@ -68,7 +75,7 @@ const HomeScreen = () => {
               thumbColor="white"
             />
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
       <View style={styles.Bento2Container}>
         <TouchableOpacity
@@ -76,7 +83,7 @@ const HomeScreen = () => {
           onPress={() =>
             navigation.navigate('Graph', {
               data: data,
-              text: 'Temperature',
+              text: 'Air Conditioner',
             })
           }>
           <View style={styles.Bento2Left}>
@@ -114,10 +121,16 @@ const HomeScreen = () => {
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
               <FontAwesome name="temperature-low" size={30} color="#8000FF" />
             </View>
-            <View
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('Graph', {
+                  data: data,
+                  text: 'Temperature',
+                })
+              }
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
               <ArrowAwjaMauve />
-            </View>
+            </TouchableOpacity>
           </View>
           <View style={styles.TextBento3Left}>
             <Text
@@ -159,14 +172,20 @@ const HomeScreen = () => {
               11 °F
             </Text>
           </View>
-          <View
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('Graph', {
+                data: data,
+                text: 'PH Sensor',
+              })
+            }
             style={{
               ...styles.BtnArrowDroit,
               backgroundColor: '#303030',
               marginLeft: '40%',
             }}>
             <ArrowAwjaDown color="white" />
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
       <View style={styles.Bento4}>
@@ -190,14 +209,20 @@ const HomeScreen = () => {
               11ppm
             </Text>
           </View>
-          <View
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('Graph', {
+                data: data,
+                text: 'CO2 Sensor',
+              })
+            }
             style={{
               ...styles.BtnArrowDroit,
               backgroundColor: '#303030',
               marginLeft: '40%',
             }}>
             <ArrowAwjaDown color="white" />
-          </View>
+          </TouchableOpacity>
         </View>
         <View style={styles.Bento4Right}>
           <View style={styles.Bento4RightTop}>
@@ -205,10 +230,16 @@ const HomeScreen = () => {
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
               <FontAwesome name="tint" size={30} color="#F9865B" />
             </View>
-            <View
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('Graph', {
+                  data: data,
+                  text: 'Humidity',
+                })
+              }
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
               <ArrowAwjaOrange />
-            </View>
+            </TouchableOpacity>
           </View>
           <View style={styles.TextBento4Right}>
             <Text

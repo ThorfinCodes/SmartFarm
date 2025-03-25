@@ -55,6 +55,7 @@ const buildGraph = (datapoints, label) => {
 const GraphScreen = () => {
   const route = useRoute();
   const {data, text} = route.params;
+  console.log(text);
   const sensorData = {
     Temperature: {name: 'Temperature', value: 23, unit: '°C'},
     Humidity: {name: 'Humidity', value: 45, unit: '%'},
