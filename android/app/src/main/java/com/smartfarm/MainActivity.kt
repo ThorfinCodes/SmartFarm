@@ -1,4 +1,4 @@
-package com.smartfarmm
+package com.smartfarm
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

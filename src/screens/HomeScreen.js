@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
@@ -16,12 +17,43 @@ import ArrowAwjaOrange from '../icones/ArrowAwjaOrange.svg';
 import ArrowAwjaMauve from '../icones/ArrowAwjaMauve.svg';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation} from '@react-navigation/native';
-import data from '../components/data';
 
+import {RFValue} from 'react-native-responsive-fontsize';
+import {Dimensions} from 'react-native';
+const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 const HomeScreen = () => {
   const navigation = useNavigation();
   const [isArrosageEnabled, setIsArrosageEnabled] = useState(false);
   const [isAirConditionerEnabled, setIsAirConditionerEnabled] = useState(false);
+  // State variables to hold sensor values
+  const [gasValue, setGasValue] = useState(null);
+  const [humidity, setHumidity] = useState(null);
+  const [soilMoisture, setSoilMoisture] = useState(null);
+  const [temperature, setTemperature] = useState(null);
+  useEffect(() => {
+    // Establish WebSocket connection to the server that sends constant data
+    const socket = new WebSocket('ws://192.168.1.37:3003'); // Connect to the WebSocket server
+
+    // Set up the WebSocket message handler
+    socket.onmessage = event => {
+      const data = JSON.parse(event.data); // Parse the incoming JSON data
+      // Update state with new sensor values
+      setGasValue(data.gas_value);
+      setHumidity(data.humidity);
+      setSoilMoisture(data.soil_moisture);
+      setTemperature(data.temperature);
+    };
+
+    // Handle WebSocket errors
+    socket.onerror = error => {
+      console.error('WebSocket error:', error);
+    };
+
+    // Clean up WebSocket connection when the component unmounts
+    return () => {
+      socket.close();
+    };
+  }, []); // Empty dependency array ensures this effect runs only once on mount
   return (
     <ScrollView
       style={styles.container}
@@ -45,7 +77,6 @@ const HomeScreen = () => {
         <TouchableOpacity
           onPress={() =>
             navigation.navigate('Graph', {
-              data: data,
               text: 'Arrosage',
             })
           }
@@ -59,12 +90,13 @@ const HomeScreen = () => {
             </View>
           </View>
           <View style={styles.GreenText}>
-            <Text style={{fontSize: 18, fontFamily: 'Poppins-SemiBold'}}>
+            <Text
+              style={{fontSize: RFValue(18), fontFamily: 'Poppins-SemiBold'}}>
               Arrosage
             </Text>
             <Text
               style={{
-                fontSize: 18,
+                fontSize: RFValue(18),
                 fontFamily: 'Poppins-Light',
                 lineHeight: 20,
               }}>
@@ -87,16 +119,26 @@ const HomeScreen = () => {
           style={styles.Bento2}
           onPress={() =>
             navigation.navigate('Graph', {
-              data: data,
               text: 'Air Conditioner',
             })
           }>
           <View style={styles.Bento2Left}>
-            <Text style={{fontFamily: 'Poppins-SemiBold', fontSize: 25}}>
+            <Text
+              style={{fontFamily: 'Poppins-SemiBold', fontSize: RFValue(24)}}>
               Air Conditioner
             </Text>
 
-            <Text style={{fontFamily: 'Poppins-Bold', fontSize: 55}}>28°C</Text>
+            {temperature != null ? (
+              <Text style={{fontFamily: 'Poppins-Bold', fontSize: RFValue(54)}}>
+                {temperature + '°C'}
+              </Text>
+            ) : (
+              <ActivityIndicator
+                size="large"
+                color="white"
+                style={{padding: 26}}
+              />
+            )}
 
             <RNSwitch
               value={isAirConditionerEnabled}
@@ -129,7 +171,6 @@ const HomeScreen = () => {
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate('Graph', {
-                  data: data,
                   text: 'Temperature',
                 })
               }
@@ -142,7 +183,7 @@ const HomeScreen = () => {
               style={{
                 color: 'white',
                 fontFamily: 'Poppins-SemiBold',
-                fontSize: 18,
+                fontSize: RFValue(18),
                 letterSpacing: 0.2,
               }}>
               Température
@@ -151,9 +192,9 @@ const HomeScreen = () => {
               style={{
                 color: 'white',
                 fontFamily: 'Poppins-Medieum',
-                fontSize: 18,
+                fontSize: RFValue(18),
               }}>
-              28°C
+              {temperature ? temperature : 'Loading...'}°C
             </Text>
           </View>
         </View>
@@ -163,24 +204,23 @@ const HomeScreen = () => {
               style={{
                 color: 'white',
                 fontFamily: 'Poppins-SemiBold',
-                fontSize: 18,
+                fontSize: RFValue(18),
                 letterSpacing: 0.3,
               }}>
-              PH Sensor
+              Soil Moisture
             </Text>
             <Text
               style={{
                 color: 'white',
                 fontFamily: 'Poppins-Medieum',
-                fontSize: 18,
+                fontSize: RFValue(18),
               }}>
-              11 °F
+              {soilMoisture ? soilMoisture : 'Loading...'}%
             </Text>
           </View>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('Graph', {
-                data: data,
                 text: 'PH Sensor',
               })
             }
@@ -200,7 +240,7 @@ const HomeScreen = () => {
               style={{
                 color: 'white',
                 fontFamily: 'Poppins-SemiBold',
-                fontSize: 18,
+                fontSize: RFValue(18),
                 letterSpacing: 0.3,
               }}>
               CO₂ Sensor
@@ -209,15 +249,14 @@ const HomeScreen = () => {
               style={{
                 color: 'white',
                 fontFamily: 'Poppins-Medieum',
-                fontSize: 18,
+                fontSize: RFValue(18),
               }}>
-              11ppm
+              {gasValue ? gasValue : 'Loading...'}ppm
             </Text>
           </View>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('Graph', {
-                data: data,
                 text: 'CO2 Sensor',
               })
             }
@@ -238,7 +277,6 @@ const HomeScreen = () => {
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate('Graph', {
-                  data: data,
                   text: 'Humidity',
                 })
               }
@@ -251,7 +289,7 @@ const HomeScreen = () => {
               style={{
                 color: 'white',
                 fontFamily: 'Poppins-SemiBold',
-                fontSize: 18,
+                fontSize: RFValue(18),
                 letterSpacing: 0.2,
               }}>
               Humidité
@@ -260,9 +298,9 @@ const HomeScreen = () => {
               style={{
                 color: 'white',
                 fontFamily: 'Poppins-Medieum',
-                fontSize: 18,
+                fontSize: RFValue(18),
               }}>
-              28 g/m³
+              {humidity ? humidity : 'Loading...'} g/m³
             </Text>
           </View>
         </View>
@@ -277,16 +315,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   Bento1: {
-    width: '100%',
-    height: 200,
+    width: screenWidth,
+    height: (screenHeight * 27.5) / 100,
     flexDirection: 'row',
-    paddingLeft: 12,
-    paddingRight: 22,
-    gap: 10,
+    paddingLeft: (screenWidth * 3.3) / 100,
+    paddingRight: (screenWidth * 6) / 100,
+    gap: (screenWidth * 2.7) / 100,
   },
   Bento1Left: {
     backgroundColor: '#222124',
-    width: '50%',
+    width: screenWidth / 2,
     height: '100%',
     borderRadius: 20,
     flexDirection: 'column',
@@ -296,22 +334,22 @@ const styles = StyleSheet.create({
   },
   Bento1LeftTop: {
     width: '100%',
-    height: '41%',
+    height: (screenHeight * 10) / 100,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingLeft: 10,
-    paddingRight: 10,
+    paddingLeft: (screenWidth * 2.7) / 100,
+    paddingRight: (screenWidth * 2.7) / 100,
   },
   imageBento1LeftTop: {
     resizeMode: 'cover',
     borderRadius: 50,
-    width: 70,
-    height: 70,
+    width: (screenWidth * 19.4) / 100,
+    height: (screenWidth * 19.4) / 100,
   },
   Bento1Right: {
     backgroundColor: '#ACF900',
-    width: '50%',
+    width: (screenWidth * 41) / 100,
     height: '100%',
     borderRadius: 20,
     justifyContent: 'space-evenly',
@@ -321,167 +359,159 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 50,
-    width: 70,
-    height: 70,
+    width: (screenWidth * 19.4) / 100,
+    height: (screenWidth * 19.4) / 100,
   },
   WelcomeText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: RFValue(18),
     width: '75%',
     letterSpacing: 1.2,
-    paddingLeft: 12,
-    marginTop: 20,
+    paddingLeft: (screenWidth * 3.3) / 100,
+    marginTop: (screenHeight * 2.4) / 100,
   },
   Bento1RightTop: {
-    height: '41%',
-    width: '100%',
-    paddingLeft: 10,
-    // justifyContent: 'space-between',
+    height: (screenHeight * 12) / 100,
+    width: screenWidth,
+    paddingLeft: (screenWidth * 2.7) / 100,
   },
   TransparentIconeGreen: {
-    width: 70,
-    height: 70,
+    marginTop: (screenHeight * 1.5) / 100,
+    width: (screenWidth * 19.4) / 100,
+    height: (screenWidth * 19.4) / 100,
     borderRadius: 180,
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  imageTransparentIconeGreen: {
-    width: '100%', // Prend toute la largeur du parent
-    height: '100%', // Prend toute la hauteur du parent
-    resizeMode: 'contain', // S'assure que l'image est contenue dans la div
-    transform: [{scale: 0.6}], // Réduit la taille à 80%
-  },
   faucet: {
-    width: 50,
-    height: 50,
+    width: (screenWidth * 13.8) / 100,
+    height: (screenWidth * 13.8) / 100,
   },
   GreenText: {
-    paddingLeft: 12,
+    paddingLeft: (screenWidth * 3.3) / 100,
     gap: 0,
   },
   SwintchContainer: {
-    marginLeft: '50%',
+    marginLeft: (screenWidth * 20.5) / 100,
   },
   Bento2Container: {
-    paddingLeft: 12,
-    paddingRight: 12,
+    paddingLeft: (screenWidth * 3.3) / 100,
+    paddingRight: (screenWidth * 3.3) / 100,
   },
   Bento2: {
     width: '100%',
-    height: 260,
+    height: (screenHeight * 35.6) / 100,
     backgroundColor: '#FFED48',
     borderRadius: 20,
     flexDirection: 'row',
   },
   Bento2Left: {
     height: '100%',
-    width: '60%',
-    paddingLeft: 10,
-    paddingTop: 12,
-    paddingBottom: 12,
+    width: (screenWidth * 56) / 100,
+    paddingLeft: (screenWidth * 2.7) / 100,
+    paddingTop: (screenHeight * 1.6) / 100,
+    paddingBottom: (screenHeight * 1.6) / 100,
     flexDirection: 'column',
     justifyContent: 'center',
   },
   Bento2Right: {
     height: '100%',
-    width: '40%',
+    width: (screenWidth * 37) / 100,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 15,
+    gap: (screenHeight * 2) / 100,
   },
   BtnArrowDroit: {
     backgroundColor: 'white',
-    height: 65,
-    width: 65,
+    height: (screenWidth * 18) / 100,
+    width: (screenWidth * 18) / 100,
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   Bento3: {
     width: '100%',
-    height: 240,
-    gap: 10,
+    height: (screenHeight * 33) / 100,
+    gap: (screenWidth * 2.8) / 100,
     flexDirection: 'row',
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingRight: 20,
+    paddingLeft: (screenWidth * 2.7) / 100,
+    paddingRight: (screenWidth * 5.5) / 100,
   },
   Bento3Left: {
     backgroundColor: '#8000FF',
     height: '100%',
-    width: '60%',
+    width: (screenWidth * 55.2) / 100,
     borderRadius: 20,
     justifyContent: 'space-between',
   },
   Bento3LeftTop: {
     width: '100%',
-    height: '45%',
+    height: (screenHeight * 15) / 100,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingLeft: (screenWidth * 2.7) / 100,
+    paddingRight: (screenWidth * 2.7) / 100,
+    paddingTop: (screenHeight * 1.6) / 100,
+    paddingBottom: (screenHeight * 1.6) / 100,
   },
   TextBento3Left: {
     justifyContent: 'center',
-    paddingLeft: 10,
-    paddingBottom: 23,
+    paddingLeft: (screenWidth * 2.7) / 100,
+    paddingBottom: (screenHeight * 3) / 100,
   },
   Bento3Right: {
     backgroundColor: '#222124',
     height: '100%',
-    width: '40%',
+    width: (screenWidth * 37) / 100,
     borderRadius: 20,
     justifyContent: 'space-around',
-    paddingLeft: 12,
+    paddingLeft: (screenWidth * 3.3) / 100,
     borderWidth: 1.5,
     borderColor: '#303030',
   },
   Bento4: {
     width: '100%',
-    height: 240,
-    gap: 10,
+    height: (screenHeight * 33) / 100,
+    gap: (screenWidth * 2.8) / 100,
     flexDirection: 'row',
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingRight: 20,
+    paddingLeft: (screenWidth * 2.7) / 100,
+    paddingRight: (screenWidth * 5.5) / 100,
   },
   Bento4Left: {
     backgroundColor: '#222124',
     height: '100%',
-    width: '40%',
+    width: (screenWidth * 37) / 100,
     borderRadius: 20,
     justifyContent: 'space-around',
-    paddingLeft: 12,
+    paddingLeft: (screenWidth * 3.3) / 100,
     borderWidth: 1.5,
     borderColor: '#303030',
   },
   Bento4Right: {
     backgroundColor: '#F9865B',
     height: '100%',
-    width: '60%',
+    width: (screenWidth * 55) / 100,
     borderRadius: 20,
     justifyContent: 'space-between',
   },
   Bento4RightTop: {
     width: '100%',
-    height: '45%',
+    height: (screenHeight * 15) / 100,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingLeft: (screenWidth * 2.7) / 100,
+    paddingRight: (screenWidth * 2.7) / 100,
+    paddingTop: (screenHeight * 1.6) / 100,
+    paddingBottom: (screenHeight * 1.6) / 100,
   },
   TextBento4Right: {
     justifyContent: 'center',
-    paddingLeft: 10,
-    paddingBottom: 23,
+    paddingLeft: (screenWidth * 2.7) / 100,
+    paddingBottom: (screenHeight * 3) / 100,
   },
 });
 export default HomeScreen;

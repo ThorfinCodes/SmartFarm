@@ -1,4 +1,4 @@
-package com.smartfarmm
+package com.smartfarm
 
 import android.app.Application
 import com.facebook.react.PackageList

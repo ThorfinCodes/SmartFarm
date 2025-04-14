@@ -1,5 +1,5 @@
 {
-  "name": "SmartFarmm",
+  "name": "SmartFarm",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10,13 +10,19 @@
     "test": "jest"
   },
   "dependencies": {
+    "@msgpack/msgpack": "^3.1.1",
+    "@react-native-firebase/app": "^21.13.0",
     "@react-navigation/native": "^7.0.15",
     "@react-navigation/native-stack": "^7.2.1",
     "@react-navigation/stack": "^7.1.2",
     "abs-svg-path": "^0.1.1",
+    "buffer": "^6.0.3",
     "d3-scale": "^4.0.2",
     "d3-shape": "^3.2.0",
+    "firebase": "^11.6.0",
     "install": "^0.13.0",
+    "msgpack-lite": "^0.1.26",
+    "msgpack5": "^6.0.2",
     "normalize-svg-path": "^1.1.0",
     "npm": "^11.2.0",
     "parse-svg-path": "^0.1.2",
@@ -24,14 +30,18 @@
     "react": "19.0.0",
     "react-native": "0.78.0",
     "react-native-animatable": "^1.4.0",
+    "react-native-config": "^1.5.5",
+    "react-native-dotenv": "^3.4.11",
     "react-native-gesture-handler": "^2.24.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-reanimated": "^3.17.1",
     "react-native-redash": "^18.1.3",
+    "react-native-responsive-fontsize": "^0.5.1",
     "react-native-safe-area-context": "^5.3.0",
     "react-native-screens": "^4.9.2",
     "react-native-svg": "^15.11.2",
-    "react-native-vector-icons": "^10.2.0"
+    "react-native-vector-icons": "^10.2.0",
+    "text-encoding": "^0.7.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
