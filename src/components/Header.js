@@ -1,17 +1,17 @@
-import React from 'react';
-import {Image, StyleSheet, Text, View} from 'react-native';
-import {useDerivedValue} from 'react-native-reanimated';
-import {round} from 'react-native-redash';
+import React, {useEffect, useRef} from 'react';
+import {Image, StyleSheet, Text, View, Animated} from 'react-native';
 
-import {graphs} from './Model';
+const Header = ({title, sensorDetails, label, delta}) => {
+  const opacity = useRef(new Animated.Value(0)).current;
 
-const Header = ({title, index, sensorDetails}) => {
-  const data = useDerivedValue(() => graphs[index.value].data);
-
-  const percentChange = useDerivedValue(
-    () => `${round(data.value.percentChange, 3)}%`,
-  );
-  const label = useDerivedValue(() => data.value.label);
+  useEffect(() => {
+    opacity.setValue(0);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [delta]);
 
   return (
     <View style={styles.container}>
@@ -28,14 +28,15 @@ const Header = ({title, index, sensorDetails}) => {
           <Text style={styles.label}>{title}</Text>
         </View>
         <View style={styles.valueContainer}>
-          <Text
+          <Animated.Text
             style={[
               styles.value,
-              {color: data.value.percentChange > 0 ? 'green' : 'red'},
+              styles.fixedDelta,
+              {color: delta > 0 ? 'green' : 'red', opacity},
             ]}>
-            {percentChange.value}
-          </Text>
-          <Text style={styles.label}>{label.value}</Text>
+            {delta >= 0 ? `+${delta.toFixed(2)}` : delta.toFixed(2)}
+          </Animated.Text>
+          <Text style={styles.label}>{label}</Text>
         </View>
       </View>
     </View>
@@ -58,6 +59,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   valueContainer: {
+    alignItems: 'center',
     gap: 10,
   },
   value: {
@@ -66,6 +68,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 18,
+  },
+  fixedDelta: {
+    minWidth: 90, // fixes shifting by keeping the width stable
+    textAlign: 'right',
+    marginRight: 10,
   },
 });
 

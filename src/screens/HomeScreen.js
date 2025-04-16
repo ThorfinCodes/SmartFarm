@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -17,43 +17,62 @@ import ArrowAwjaOrange from '../icones/ArrowAwjaOrange.svg';
 import ArrowAwjaMauve from '../icones/ArrowAwjaMauve.svg';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation} from '@react-navigation/native';
-
+import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
+import {PermissionsAndroid, Platform} from 'react-native';
 import {RFValue} from 'react-native-responsive-fontsize';
 import {Dimensions} from 'react-native';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
-const HomeScreen = () => {
+const HomeScreen = ({
+  gasValue,
+  humidity,
+  soilMoisture,
+  temperature,
+  isArrosageEnabled,
+  socketRef,
+}) => {
   const navigation = useNavigation();
-  const [isArrosageEnabled, setIsArrosageEnabled] = useState(false);
+
+  // Local state initialized with prop
+  const [isArrosageOn, setIsArrosageOn] = useState(isArrosageEnabled);
   const [isAirConditionerEnabled, setIsAirConditionerEnabled] = useState(false);
-  // State variables to hold sensor values
-  const [gasValue, setGasValue] = useState(null);
-  const [humidity, setHumidity] = useState(null);
-  const [soilMoisture, setSoilMoisture] = useState(null);
-  const [temperature, setTemperature] = useState(null);
-  useEffect(() => {
-    // Establish WebSocket connection to the server that sends constant data
-    const socket = new WebSocket('ws://192.168.1.37:3003'); // Connect to the WebSocket server
+  const [isMotionDetectorEnabled, setIsMotionDetectorEnabled] = useState(false);
 
-    // Set up the WebSocket message handler
-    socket.onmessage = event => {
-      const data = JSON.parse(event.data); // Parse the incoming JSON data
-      // Update state with new sensor values
-      setGasValue(data.gas_value);
-      setHumidity(data.humidity);
-      setSoilMoisture(data.soil_moisture);
-      setTemperature(data.temperature);
-    };
+  const handleMotionSwitchToggle = () => {
+    const newValue = !isMotionDetectorEnabled;
 
-    // Handle WebSocket errors
-    socket.onerror = error => {
-      console.error('WebSocket error:', error);
-    };
+    // Update local state
+    setIsMotionDetectorEnabled(newValue);
 
-    // Clean up WebSocket connection when the component unmounts
-    return () => {
-      socket.close();
-    };
-  }, []); // Empty dependency array ensures this effect runs only once on mount
+    // Send message through WebSocket
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'TOGGLE_MOTION_DETECTOR',
+          value: newValue,
+        }),
+      );
+    } else {
+      console.warn('WebSocket is not open. Cannot send message.');
+    }
+  };
+  const handleSwitchToggle = () => {
+    const newValue = !isArrosageOn;
+
+    // Update local state
+    setIsArrosageOn(newValue);
+
+    // Send message through WebSocket
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'TOGGLE_PUMP',
+          value: newValue,
+        }),
+      );
+    } else {
+      console.warn('WebSocket is not open. Cannot send message.');
+    }
+  };
   return (
     <ScrollView
       style={styles.container}
@@ -74,13 +93,7 @@ const HomeScreen = () => {
             Welcome to the farm
           </Text>
         </View>
-        <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('Graph', {
-              text: 'Arrosage',
-            })
-          }
-          style={styles.Bento1Right}>
+        <View style={styles.Bento1Right}>
           <View style={styles.Bento1RightTop}>
             <View style={styles.TransparentIconeGreen}>
               <Image
@@ -105,23 +118,17 @@ const HomeScreen = () => {
           </View>
           <View style={styles.SwintchContainer}>
             <RNSwitch
-              value={isArrosageEnabled}
-              handleOnPress={() => setIsArrosageEnabled(!isArrosageEnabled)}
+              value={isArrosageOn}
+              handleOnPress={handleSwitchToggle}
               activeTrackColor="#9DE607"
               inActiveTrackColor="gray"
               thumbColor="white"
             />
           </View>
-        </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.Bento2Container}>
-        <TouchableOpacity
-          style={styles.Bento2}
-          onPress={() =>
-            navigation.navigate('Graph', {
-              text: 'Air Conditioner',
-            })
-          }>
+        <View style={styles.Bento2}>
           <View style={styles.Bento2Left}>
             <Text
               style={{fontFamily: 'Poppins-SemiBold', fontSize: RFValue(24)}}>
@@ -159,7 +166,7 @@ const HomeScreen = () => {
               <ArrowDown color="white" />
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.Bento3}>
         <View style={styles.Bento3Left}>
@@ -191,7 +198,7 @@ const HomeScreen = () => {
             <Text
               style={{
                 color: 'white',
-                fontFamily: 'Poppins-Medieum',
+                fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
               {temperature ? temperature : 'Loading...'}°C
@@ -212,16 +219,20 @@ const HomeScreen = () => {
             <Text
               style={{
                 color: 'white',
-                fontFamily: 'Poppins-Medieum',
+                fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {soilMoisture ? soilMoisture : 'Loading...'}%
+              {soilMoisture === 50
+                ? 'Wet'
+                : soilMoisture === 0
+                ? 'Dry'
+                : 'Loading...'}
             </Text>
           </View>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('Graph', {
-                text: 'PH Sensor',
+                text: 'soil_moisture',
               })
             }
             style={{
@@ -243,21 +254,21 @@ const HomeScreen = () => {
                 fontSize: RFValue(18),
                 letterSpacing: 0.3,
               }}>
-              CO₂ Sensor
+              Gas value
             </Text>
             <Text
               style={{
                 color: 'white',
-                fontFamily: 'Poppins-Medieum',
+                fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {gasValue ? gasValue : 'Loading...'}ppm
+              {gasValue ? `${gasValue} ppm` : 'Loading...'}
             </Text>
           </View>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('Graph', {
-                text: 'CO2 Sensor',
+                text: 'gas_value',
               })
             }
             style={{
@@ -297,12 +308,24 @@ const HomeScreen = () => {
             <Text
               style={{
                 color: 'white',
-                fontFamily: 'Poppins-Medieum',
+                fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
               {humidity ? humidity : 'Loading...'} g/m³
             </Text>
           </View>
+        </View>
+      </View>
+      <View style={styles.MotionDetectorContainer}>
+        <View style={styles.MotionDetectorBox}>
+          <Text style={styles.MotionDetectorTitle}>Motion Detector</Text>
+          <RNSwitch
+            value={isMotionDetectorEnabled}
+            handleOnPress={handleMotionSwitchToggle}
+            activeTrackColor="#FF6F61"
+            inActiveTrackColor="gray"
+            thumbColor="white"
+          />
         </View>
       </View>
     </ScrollView>
@@ -512,6 +535,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingLeft: (screenWidth * 2.7) / 100,
     paddingBottom: (screenHeight * 3) / 100,
+  },
+  // Existing Bento styles...
+  MotionDetectorContainer: {
+    width: '100%',
+    height: (screenHeight * 20) / 100,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 20,
+    marginTop: (screenHeight * 3) / 100,
+    padding: (screenWidth * 3) / 100,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  MotionDetectorBox: {
+    backgroundColor: '#2C2C2C',
+    width: '100%',
+    borderRadius: 15,
+    padding: (screenWidth * 4) / 100,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  MotionDetectorTitle: {
+    color: '#FF6F61',
+    fontSize: RFValue(20),
+    fontFamily: 'Poppins-SemiBold',
+    marginBottom: (screenHeight * 2) / 100,
+    letterSpacing: 0.5,
   },
 });
 export default HomeScreen;
