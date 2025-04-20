@@ -2,7 +2,11 @@ import React, {useEffect} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import HomeScreen from './src/screens/HomeScreen';
+import IdentificationScreen from './src/screens/IdentificationScreen';
+import SignupScreen from './src/screens/SignupScreen';
 import GraphScreen from './src/screens/GraphScreen';
+import Subzone from './src/screens/Subzone';
+import UserStuff from './src/screens/UserStuff';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 
 import {FIREBASE_API_KEY} from '@env';
@@ -22,7 +26,14 @@ const App = () => {
           screenOptions={{
             headerShown: false,
           }}>
+          <Stack.Screen
+            name="Identification"
+            component={IdentificationScreen}
+          />
+          <Stack.Screen name="Signup" component={SignupScreen} />
           <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="MyStuff" component={UserStuff} />
+          <Stack.Screen name="MySubzone" component={Subzone} />
           <Stack.Screen
             name="Graph"
             component={GraphScreen}
