@@ -45,7 +45,7 @@ const App = () => {
         importance: AndroidImportance.HIGH,
       });
 
-      socketRef.current = new WebSocket('wss://zany-pyrite-trollius.glitch.me');
+      socketRef.current = new WebSocket('ws://192.168.1.33:3003');
 
       socketRef.current.onmessage = async event => {
         console.log('Received from server:', event.data);

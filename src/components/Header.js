@@ -1,7 +1,7 @@
 import React, {useEffect, useRef} from 'react';
 import {Image, StyleSheet, Text, View, Animated} from 'react-native';
 
-const Header = ({title, sensorDetails, label, delta}) => {
+const Header = ({title, sensorDetails, delta}) => {
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -34,9 +34,12 @@ const Header = ({title, sensorDetails, label, delta}) => {
               styles.fixedDelta,
               {color: delta > 0 ? 'green' : 'red', opacity},
             ]}>
-            {delta >= 0 ? `+${delta.toFixed(2)}` : delta.toFixed(2)}
+            {typeof delta === 'number'
+              ? delta >= 0
+                ? `+${delta.toFixed(2)}`
+                : delta.toFixed(2)
+              : '--'}
           </Animated.Text>
-          <Text style={styles.label}>{label}</Text>
         </View>
       </View>
     </View>
@@ -70,7 +73,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   fixedDelta: {
-    minWidth: 90, // fixes shifting by keeping the width stable
+    minWidth: 90,
     textAlign: 'right',
     marginRight: 10,
   },

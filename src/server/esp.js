@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 
 // Simulate the ESP device (local WebSocket client)
-const espWs = new WebSocket('ws://zany-pyrite-trollius.glitch.me');
+const espWs = new WebSocket('ws://192.168.1.33:3003');
 
 // State variables for pump and motion detector
 let pumpEnabled = false;
@@ -74,4 +74,4 @@ setInterval(() => {
       }`,
     );
   }
-}, 200);
+}, 1000);

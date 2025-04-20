@@ -37,34 +37,14 @@ wss.on('connection', ws => {
 
   // Send pumpEnabled state once on connection
   ws.send(JSON.stringify({type: 'PUMP_STATUS', value: pumpEnabled}));
-
-  // Keep broadcasting sensor data and alerts every second (no need to include pumpEnabled)
-  const interval = setInterval(() => {
-    const timestamp = Date.now();
-    if (sharedSensorData) {
-      sharedSensorData.temperature = safeFloor(sharedSensorData.temperature);
-      sharedSensorData.humidity = safeFloor(sharedSensorData.humidity);
-
-      sharedSensorData.gas_value = safeFloor(sharedSensorData.gas_value);
-    }
-
-    // Check for alerts and prepare them
-    const alertsToSend = checkAlerts(sharedSensorData);
-
-    // Prepare the data to send, including alerts if any
-    const data = {
-      ...sharedSensorData,
-      alerts: alertsToSend.length > 0 ? alertsToSend : null, // Only include alerts if there are any
-      type: alertsToSend.length > 0 ? 'ALERT' : null,
-      timestamp,
-    };
-
-    // Send the data (sensor + alerts) to the client
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(data));
-    }
-  }, 1);
-
+  if (sharedSensorData) {
+    ws.send(
+      JSON.stringify({
+        ...sharedSensorData,
+        timestamp: Date.now(),
+      }),
+    );
+  }
   // Handle client messages
   ws.on('message', message => {
     try {
@@ -121,9 +101,9 @@ wss.on('connection', ws => {
         });
 
         console.log(`Current array size: ${sensorDataHistory.length}`);
+
         // If the array reaches one month's worth of data (30 days worth of data in seconds), trim the history
         const oneMonthInSeconds = 2592000; // 30 days * 24 hours * 3600 seconds
-
         const latestWeekInSeconds = 604800; // 1 week * 24 hours * 3600 seconds
 
         // If the history array exceeds the one month (30 days) of data
@@ -140,6 +120,19 @@ wss.on('connection', ws => {
         if (sensorDataHistory.length === 3600) {
           console.log('Graph is ready with 3600 entries');
         }
+
+        // Now, send the new sensor data to all connected clients
+        const dataToSend = {
+          ...flooredSensorData,
+          timestamp: Date.now(),
+        };
+
+        // Prepare and send the data to all connected clients
+        clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(dataToSend));
+          }
+        });
       }
     } catch (err) {
       console.error('Error parsing message:', err);
@@ -148,7 +141,6 @@ wss.on('connection', ws => {
 
   ws.on('close', () => {
     console.log('Client disconnected');
-    clearInterval(interval); // Stop broadcasting when client disconnects
     clients.delete(ws); // Remove client from set
   });
 
@@ -156,62 +148,6 @@ wss.on('connection', ws => {
     console.error('WebSocket error:', error);
   });
 });
-let lastAlertTimestamp = {soil_moisture: 0};
-const ALERT_COOLDOWN = 5 * 60 * 1000; // 5 minutes
-// Function to check thresholds and prepare alerts
-function checkAlerts(sensorData) {
-  const alertsToSend = [];
-  // Ensure sensorData is valid before proceeding
-  if (!sensorData) {
-    console.error('Sensor data is null or undefined');
-    return alertsToSend; // Return empty alerts if sensor data is invalid
-  }
-  // Check for PIR status and send an alert if it's true
-  if (sensorData.pir_status && !lastAlertState.pir_status) {
-    alertsToSend.push('Motion detected (PIR active)');
-    lastAlertState.pir_status = true; // Track that the alert has been sent
-  } else if (!sensorData.pir_status && lastAlertState.pir_status) {
-    lastAlertState.pir_status = false; // Reset alert state when PIR is no longer active
-  }
-  if (sensorData.temperature < 10 && !lastAlertState.temperature) {
-    alertsToSend.push('Temperature too low (< 10°C)');
-    lastAlertState.temperature = true;
-  } else if (sensorData.temperature > 35 && !lastAlertState.temperature) {
-    alertsToSend.push('Temperature too high (> 35°C)');
-    lastAlertState.temperature = true;
-  } else if (sensorData.temperature >= 10 && sensorData.temperature <= 35) {
-    lastAlertState.temperature = false;
-  }
-
-  if (sensorData.humidity < 40 && !lastAlertState.humidity) {
-    alertsToSend.push('Humidity too low (< 40%)');
-    lastAlertState.humidity = true;
-  } else if (sensorData.humidity > 85 && !lastAlertState.humidity) {
-    alertsToSend.push('Humidity too high (> 85%)');
-    lastAlertState.humidity = true;
-  } else if (sensorData.humidity >= 40 && sensorData.humidity <= 85) {
-    lastAlertState.humidity = false;
-  }
-
-  if (
-    sensorData.soil_moisture === false &&
-    (!lastAlertState.soil_moisture ||
-      Date.now() - lastAlertTimestamp.soil_moisture > ALERT_COOLDOWN)
-  ) {
-    alertsToSend.push('Soil is dry! Please water the plant.');
-    lastAlertState.soil_moisture = true;
-    lastAlertTimestamp.soil_moisture = Date.now();
-  }
-
-  if (sensorData.gas_value > 300 && !lastAlertState.gas_value) {
-    alertsToSend.push('Gas level too high (> 300ppm)');
-    lastAlertState.gas_value = true;
-  } else if (sensorData.gas_value <= 300) {
-    lastAlertState.gas_value = false;
-  }
-
-  return alertsToSend;
-}
 
 const timeframes = {
   hour: 3600, // 1 hour = 3600 seconds
@@ -220,9 +156,8 @@ const timeframes = {
   month: 2592000, // 1 month = 2592000 seconds (30 days)
 };
 
-// This part has been updated to HTTP instead of WebSocket
 app.get('/simulate-data', (req, res) => {
-  const {sensor} = req.query; // Expecting only 'sensor' as input
+  const {sensor} = req.query;
   console.log('Received request for sensor:', sensor);
 
   const validTypes = ['temperature', 'humidity', 'gas_value', 'soil_moisture'];
@@ -230,29 +165,13 @@ app.get('/simulate-data', (req, res) => {
     return res.send({error: 'Invalid sensor type requested'});
   }
 
-  let dataToSend = {};
+  // Filter only the selected sensor's data
+  const filteredData = Array.from(sensorDataHistory.values()).map(entry => ({
+    timestamp: entry.timestamp,
+    value: entry[sensor],
+  }));
 
-  // Check each timeframe and determine if data is available
-  for (let timeframe in timeframes) {
-    const durationInSeconds = timeframes[timeframe];
-    const dataSlice = Array.from(sensorDataHistory.values()).slice(
-      Math.max(sensorDataHistory.size - durationInSeconds, 0),
-    );
-
-    if (dataSlice.length < durationInSeconds) {
-      dataToSend[timeframe] = 'Data Incomplete'; // Data is not complete for the timeframe
-    } else {
-      dataToSend[timeframe] = dataSlice; // Send the data slice for the timeframe
-    }
-
-    // Downsample the data if it's not incomplete
-    if (dataToSend[timeframe] !== 'Data Incomplete') {
-      dataToSend[timeframe] = downsampleData(dataToSend[timeframe], 60, sensor); // Downsample data to 60 points
-    }
-  }
-
-  // Prepare the response with all timeframes
-  const response = {values: dataToSend};
+  const response = {values: filteredData};
   const binaryData = msgpack.encode(response);
   res.send(binaryData);
 });
