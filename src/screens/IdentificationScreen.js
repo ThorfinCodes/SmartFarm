@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import ArrowDroite from '../icones/ArrowDroite.svg';
 import {useNavigation} from '@react-navigation/native';
@@ -166,6 +167,16 @@ const IdentificationScreen = () => {
             />
           </View>
         </View>
+        {error ? (
+          <Text
+            style={{
+              color: 'red',
+              fontFamily: 'Poppins-Regular',
+              marginTop: 10,
+            }}>
+            {error}
+          </Text>
+        ) : null}
         <View style={styles.BottomBtn}>
           <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
             <Text
@@ -178,21 +189,15 @@ const IdentificationScreen = () => {
             </Text>
           </TouchableOpacity>
           <View style={styles.Btn}>
-            <TouchableOpacity onPress={handleLogin}>
-              <ArrowDroite />
+            <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
+              {isLoading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <ArrowDroite />
+              )}
             </TouchableOpacity>
           </View>
         </View>
-        {error ? (
-          <Text
-            style={{
-              color: 'red',
-              fontFamily: 'Poppins-Regular',
-              marginTop: 10,
-            }}>
-            {error}
-          </Text>
-        ) : null}
       </View>
       <Image
         source={require('../images/Demicircle.png')}
@@ -239,8 +244,10 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   BottomSc: {
+    bottom: 0,
+    position: 'absolute',
     width: '100%',
-    height: '45%',
+    height: (screenHeight * 45) / 100,
     backgroundColor: 'black',
     borderTopLeftRadius: 140,
     alignItems: 'center',

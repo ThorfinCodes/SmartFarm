@@ -231,7 +231,123 @@ app.post('/verify-token', async (req, res) => {
     return res.status(401).json({valid: false, message: 'Invalid token'});
   }
 });
+app.post('/add-zone', async (req, res) => {
+  const authHeader = req.headers.authorization;
 
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Invalid or missing token');
+    return res
+      .status(401)
+      .json({success: false, message: 'Missing or invalid token'});
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  const {uid, name, color} = req.body;
+
+  if (!uid || !name || !color) {
+    return res
+      .status(400)
+      .json({success: false, message: 'UID, name, and color are required'});
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    if (decodedToken.uid !== uid) {
+      return res.status(403).json({success: false, message: 'UID mismatch'});
+    }
+
+    const userRef = admin.database().ref(`users/${uid}`);
+    const userSnapshot = await userRef.once('value');
+
+    if (!userSnapshot.exists()) {
+      return res.status(404).json({success: false, message: 'User not found'});
+    }
+
+    // Add the new zone under users/{uid}/zones/
+    const zonesRef = userRef.child('zones');
+    const newZoneRef = zonesRef.push(); // generate unique key
+    await newZoneRef.set({name, color});
+
+    console.log(`Zone added for user ${uid}:`, {name, color});
+
+    return res.status(200).json({
+      success: true,
+      message: 'Zone added successfully',
+      zoneId: newZoneRef.key,
+    });
+  } catch (err) {
+    console.error('Error adding zone:', err);
+    return res
+      .status(500)
+      .json({success: false, message: 'Internal server error'});
+  }
+});
+app.post('/add-subzone', async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Invalid or missing token');
+    return res
+      .status(401)
+      .json({success: false, message: 'Missing or invalid token'});
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  const {uid, zoneId, name, color} = req.body;
+
+  if (!uid || !zoneId || !name || !color) {
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: 'UID, zoneId, name, and color are required',
+      });
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    if (decodedToken.uid !== uid) {
+      return res.status(403).json({success: false, message: 'UID mismatch'});
+    }
+
+    const userRef = admin.database().ref(`users/${uid}`);
+    const userSnapshot = await userRef.once('value');
+
+    if (!userSnapshot.exists()) {
+      return res.status(404).json({success: false, message: 'User not found'});
+    }
+
+    const zoneRef = userRef.child(`zones/${zoneId}`);
+    const zoneSnapshot = await zoneRef.once('value');
+
+    if (!zoneSnapshot.exists()) {
+      return res.status(404).json({success: false, message: 'Zone not found'});
+    }
+
+    // Add the new subzone under users/{uid}/zones/{zoneId}/subzones/
+    const subzonesRef = zoneRef.child('subzones');
+    const newSubzoneRef = subzonesRef.push(); // generate unique key
+    await newSubzoneRef.set({name, color});
+
+    console.log(`Subzone added for user ${uid}, zone ${zoneId}:`, {
+      name,
+      color,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Subzone added successfully',
+      subzoneId: newSubzoneRef.key,
+    });
+  } catch (err) {
+    console.error('Error adding subzone:', err);
+    return res
+      .status(500)
+      .json({success: false, message: 'Internal server error'});
+  }
+});
 app.get('/simulate-data', (req, res) => {
   const {sensor} = req.query;
   console.log('Received request for sensor:', sensor);

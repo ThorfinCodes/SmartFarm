@@ -26,6 +26,8 @@ const App = () => {
   const [isArrosageEnabled, setIsArrosageEnabled] = useState(false);
   const [initialRoute, setInitialRoute] = useState(null);
   const [username, setUsername] = useState('');
+  const [zones, setZones] = useState([]);
+  const [subZones, setSubZones] = useState([]);
   const socketRef = useRef(null);
   let lastAlertTime = Date.now(); // To track time of the last alert
 
@@ -75,6 +77,32 @@ const App = () => {
 
           if (res.ok && result?.valid) {
             setUsername(result.user.username);
+
+            const userZones = result.user.zones
+              ? Object.entries(result.user.zones).map(([zoneId, zone]) => ({
+                  zoneId, // Add the zoneId here
+                  name: zone.name,
+                  color: zone.color,
+                }))
+              : []; // convert { zoneId: {name, color}, ... } → [{zoneId, name, color}, ...]
+            const userSubZones = result.user.zones
+              ? Object.entries(result.user.zones).flatMap(([_, zone]) =>
+                  zone.subzones
+                    ? Object.entries(zone.subzones).map(
+                        ([subZoneId, subZone]) => ({
+                          subZoneId,
+                          name: subZone.name,
+                          color: subZone.color,
+                        }),
+                      )
+                    : [],
+                )
+              : [];
+            console.log('app zones:', userZones);
+            console.log('app subzones:', userSubZones);
+
+            setZones(userZones);
+            setSubZones(userSubZones);
             setInitialRoute('MyStuff');
           } else {
             await AsyncStorage.removeItem('userToken');
@@ -161,12 +189,12 @@ const App = () => {
       </View>
     );
   }
-  const UserStuffWithUsername = ({username, ...props}) => {
-    return <UserStuff {...props} username={username} />;
+  const UserStuffWithUsername = ({username, zones, ...props}) => {
+    return <UserStuff {...props} username={username} zones={zones} />;
   };
 
-  const SubzoneWithUsername = ({username, ...props}) => {
-    return <Subzone {...props} username={username} />;
+  const SubzoneWithUsername = ({username, subZones, ...props}) => {
+    return <Subzone {...props} username={username} subZones={subZones} />;
   };
   return (
     <GestureHandlerRootView style={{flex: 1}}>
@@ -193,11 +221,23 @@ const App = () => {
           </Stack.Screen>
           <Stack.Screen name="Signup" component={SignupScreen} />
           <Stack.Screen name="MyStuff">
-            {props => <UserStuffWithUsername {...props} username={username} />}
+            {props => (
+              <UserStuffWithUsername
+                {...props}
+                username={username}
+                zones={zones}
+              />
+            )}
           </Stack.Screen>
 
           <Stack.Screen name="MySubzone">
-            {props => <SubzoneWithUsername {...props} username={username} />}
+            {props => (
+              <SubzoneWithUsername
+                {...props}
+                username={username}
+                subZones={subZones}
+              />
+            )}
           </Stack.Screen>
           <Stack.Screen name="Graph" options={{animation: 'fade_from_bottom'}}>
             {props => (

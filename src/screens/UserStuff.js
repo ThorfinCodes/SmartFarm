@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation} from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const UserStuff = props => {
   const [zoneName, setZoneName] = useState('');
@@ -19,9 +20,16 @@ const UserStuff = props => {
   const [selectedColor, setSelectedColor] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [zones, setZones] = useState([]);
+  const navigation = useNavigation();
   const zoneUnderline = useState(new Animated.Value(1))[0];
 
-  const {username} = props;
+  const {username, zones: incomingZones} = props;
+  console.log('zones:', zones);
+  useEffect(() => {
+    if (props.zones && props.zones.length > 0) {
+      setZones([...props.zones]);
+    }
+  }, [props.zones]);
   const handleFocus = () => {
     setZoneFocused(true);
     Animated.timing(zoneUnderline, {
@@ -44,12 +52,39 @@ const UserStuff = props => {
     setSelectedColor(color);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (zoneName && selectedColor) {
-      setZones([...zones, {name: zoneName, color: selectedColor}]);
-      setZoneName('');
-      setSelectedColor(null);
-      setIsModalVisible(false);
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        const uid = await AsyncStorage.getItem('uid');
+
+        const response = await fetch('http://192.168.1.41:3000/add-zone', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`, // sending token in Authorization header
+          },
+          body: JSON.stringify({
+            uid: uid,
+            name: zoneName,
+            color: selectedColor,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Zone added on server:', data);
+
+          setZones([...zones, {name: zoneName, color: selectedColor}]);
+          setZoneName('');
+          setSelectedColor(null);
+          setIsModalVisible(false);
+        } else {
+          console.error('Server error:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Network or AsyncStorage error:', error);
+      }
     }
   };
 
@@ -70,9 +105,12 @@ const UserStuff = props => {
       <View style={styles.ZoneContainer}>
         <FlatList
           data={zones}
-          keyExtractor={(item, index) => index.toString()}
+          keyExtractor={item => item.zoneId.toString()} // Using zoneId as the unique key
           renderItem={({item}) => (
-            <TouchableOpacity onPress={() => navigation.navigate('MySubzone')}>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('MySubzone', {zoneId: item.zoneId})
+              }>
               <View style={[styles.Zone, {backgroundColor: item.color}]}>
                 <Text style={styles.zoneText}>{item.name}</Text>
                 <View style={styles.BtnZone}>

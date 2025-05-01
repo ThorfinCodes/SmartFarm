@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Subzone = props => {
   const [zoneName, setZoneName] = useState('');
@@ -18,7 +19,13 @@ const Subzone = props => {
   const [selectedColor, setSelectedColor] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [zones, setZones] = useState([]);
-  const {username} = props;
+
+  const {username, route, subZones} = props;
+  const {zoneId} = route.params;
+
+  console.log('zone id:', zoneId);
+  console.log('subZones:', subZones); // ✅ log the subZones
+
   const zoneUnderline = useState(new Animated.Value(1))[0];
 
   const handleFocus = () => {
@@ -43,13 +50,48 @@ const Subzone = props => {
     setSelectedColor(color);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (zoneName && selectedColor) {
-      const newZone = {name: zoneName, color: selectedColor};
-      setZones([...zones, newZone]);
-      setZoneName('');
-      setSelectedColor(null);
-      setIsModalVisible(false);
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        const uid = await AsyncStorage.getItem('uid');
+
+        if (!token || !uid) {
+          console.warn('Missing token or uid from storage');
+          return;
+        }
+
+        const response = await fetch('http://192.168.1.41:3000/add-subzone', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            uid: uid,
+            zoneId: zoneId,
+            name: zoneName,
+            color: selectedColor,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          const newZone = {name: zoneName, color: selectedColor};
+          setZones([...zones, newZone]);
+          setZoneName('');
+          setSelectedColor(null);
+          setIsModalVisible(false);
+        } else {
+          console.warn(
+            'Failed to add subzone:',
+            data.message || 'Unknown error',
+          );
+        }
+      } catch (error) {
+        console.error('Error adding subzone:', error);
+      }
     }
   };
 
@@ -68,17 +110,17 @@ const Subzone = props => {
       </View>
 
       <ScrollView style={styles.ZoneContainer}>
-        {zones.map((zone, index) => (
+        {subZones.map((subZone, index) => (
           <View
-            key={index}
-            style={[styles.Zone, {backgroundColor: zone.color}]}>
+            key={subZone.subZoneId || index}
+            style={[styles.Zone, {backgroundColor: subZone.color}]}>
             <Text
               style={{
                 color: 'black',
                 fontFamily: 'Poppins-Bold',
                 fontSize: 25,
               }}>
-              {zone.name}
+              {subZone.name}
             </Text>
             <View style={styles.BtnZone}>
               <ArrowAwjaDown color="white" />
