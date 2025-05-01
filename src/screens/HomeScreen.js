@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -17,8 +17,7 @@ import ArrowAwjaOrange from '../icones/ArrowAwjaOrange.svg';
 import ArrowAwjaMauve from '../icones/ArrowAwjaMauve.svg';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation} from '@react-navigation/native';
-import notifee, {AndroidImportance, EventType} from '@notifee/react-native';
-import {PermissionsAndroid, Platform} from 'react-native';
+
 import {RFValue} from 'react-native-responsive-fontsize';
 import {Dimensions} from 'react-native';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');

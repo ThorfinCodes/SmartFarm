@@ -10,14 +10,6 @@ const WebSocket = require('ws'); // Import WebSocket
 app.use(express.json());
 app.use(compression());
 
-// Last alert states to avoid repeated alerts
-let lastAlertState = {
-  temperature: false,
-  humidity: false,
-  soil_moisture: false,
-  gas_value: false,
-  pir_status: false,
-};
 const wss = new WebSocket.Server({port: 3003});
 
 let pumpEnabled = false;
@@ -148,13 +140,97 @@ wss.on('connection', ws => {
     console.error('WebSocket error:', error);
   });
 });
+app.post('/signup', async (req, res) => {
+  const {username, email, password} = req.body;
 
-const timeframes = {
-  hour: 3600, // 1 hour = 3600 seconds
-  day: 86400, // 1 day = 86400 seconds
-  week: 604800, // 1 week = 604800 seconds
-  month: 2592000, // 1 month = 2592000 seconds (30 days)
-};
+  if (!username || !email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: 'Username, email, and password are required.',
+    });
+  }
+
+  try {
+    console.log('Received signup request:', {username, email});
+
+    // Create user in Firebase Auth
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+    });
+
+    console.log('Firebase user created:', userRecord.uid);
+
+    // Add user info to Firebase Realtime Database
+    const userRef = db.ref(`users/${userRecord.uid}`);
+    await userRef.set({
+      username,
+      email,
+    });
+
+    // Create a custom token
+    const customToken = await admin.auth().createCustomToken(userRecord.uid);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Signup successful!',
+      token: customToken, // <-- send this to app
+      uid: userRecord.uid,
+    });
+  } catch (error) {
+    console.error('Firebase signup error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Signup failed.',
+    });
+  }
+});
+app.post('/verify-token', async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Invalid or missing token');
+    return res
+      .status(401)
+      .json({valid: false, message: 'Missing or invalid token'});
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  const {uid} = req.body;
+
+  if (!uid) {
+    return res.status(400).json({valid: false, message: 'UID is required'});
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    if (decodedToken.uid === uid) {
+      // Fetch all user data from Firebase Realtime Database
+      const userRef = admin.database().ref(`users/${uid}`);
+      const snapshot = await userRef.once('value');
+
+      if (!snapshot.exists()) {
+        return res.status(404).json({valid: false, message: 'User not found'});
+      }
+
+      const userData = snapshot.val(); // Get all user data from Realtime Database
+
+      const response = {
+        valid: true,
+        user: userData, // Send all user data back
+      };
+
+      console.log('Sending response:', response); // <-- log the response
+      return res.status(200).json(response);
+    } else {
+      return res.status(403).json({valid: false, message: 'UID mismatch'});
+    }
+  } catch (err) {
+    console.error('Error verifying token:', err);
+    return res.status(401).json({valid: false, message: 'Invalid token'});
+  }
+});
 
 app.get('/simulate-data', (req, res) => {
   const {sensor} = req.query;
@@ -177,31 +253,7 @@ app.get('/simulate-data', (req, res) => {
 });
 
 // Downsampling function to reduce data from 3600 to around 200 data points
-function downsampleData(data, targetCount, sensor) {
-  const chunkSize = Math.floor(data.length / targetCount); // Calculate how many data points per chunk
-  const result = [];
 
-  // Iterate over the data in chunks
-  for (let i = 0; i < data.length; i += chunkSize) {
-    const chunk = data.slice(i, i + chunkSize); // Slice out the chunk of data
-
-    // If the chunk is empty, skip it
-    if (chunk.length === 0) continue;
-
-    // Calculate the average value for the sensor in the chunk
-    const avgValue =
-      chunk.reduce((sum, item) => sum + (item[sensor] || 0), 0) / chunk.length;
-
-    // Calculate the average timestamp for the chunk (optional, if you want to keep the time dimension consistent)
-    const avgTimestamp =
-      chunk.reduce((sum, item) => sum + item.timestamp, 0) / chunk.length;
-
-    // Store the averaged value and timestamp
-    result.push({timestamp: avgTimestamp, value: avgValue});
-  }
-
-  return result;
-}
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

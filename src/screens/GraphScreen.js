@@ -64,7 +64,7 @@ const GraphScreen = ({gasValue, humidity, soilMoisture, temperature}) => {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          'http://192.168.1.33:3000/simulate-data?sensor=' + sensor,
+          'http://192.168.1.41:3000/simulate-data?sensor=' + sensor,
         );
         const buffer = await response.arrayBuffer();
         const decodedData = msgpack.decode(new Uint8Array(buffer));
