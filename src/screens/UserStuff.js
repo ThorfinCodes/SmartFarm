@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import React, {useState} from 'react';
 import {
   View,
@@ -278,6 +279,8 @@ const styles = StyleSheet.create({
 
 export default UserStuff;
 =======
+=======
+>>>>>>> 07e2490937a3e613fe3a4334e648a4dff4c2f9da
 import React, {useState} from 'react';
 import {
   View,
@@ -556,4 +559,7 @@ const styles = StyleSheet.create({
 });
 
 export default Home;
+<<<<<<< HEAD
+>>>>>>> 07e2490937a3e613fe3a4334e648a4dff4c2f9da
+=======
 >>>>>>> 07e2490937a3e613fe3a4334e648a4dff4c2f9da
