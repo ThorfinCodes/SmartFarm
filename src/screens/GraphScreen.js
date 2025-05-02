@@ -4,7 +4,7 @@ import {useRoute} from '@react-navigation/native';
 import msgpack from 'msgpack-lite';
 import {LineChart} from 'react-native-chart-kit';
 import Header from '../components/Header';
-
+import {SIMULATE_DATA_URL} from '@env';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 const SIZE = screenWidth;
 
@@ -63,9 +63,7 @@ const GraphScreen = ({gasValue, humidity, soilMoisture, temperature}) => {
 
     const fetchData = async () => {
       try {
-        const response = await fetch(
-          'http://192.168.1.41:3000/simulate-data?sensor=' + sensor,
-        );
+        const response = await fetch(SIMULATE_DATA_URL + sensor);
         const buffer = await response.arrayBuffer();
         const decodedData = msgpack.decode(new Uint8Array(buffer));
 

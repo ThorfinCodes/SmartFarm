@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ActivityIndicator, View} from 'react-native';
 import './src/firebase/firebase';
 import {getAuth, onAuthStateChanged} from '@react-native-firebase/auth';
+import {VERIFY_TOKEN_URL, WEBSOCKET_URL} from '@env';
 const Stack = createNativeStackNavigator();
 
 const App = () => {
@@ -60,8 +61,7 @@ const App = () => {
           await AsyncStorage.setItem('userToken', token);
           await AsyncStorage.setItem('uid', uid);
 
-          // Proceed to verify token or other app logic
-          const res = await fetch('http://192.168.1.41:3000/verify-token', {
+          const res = await fetch(VERIFY_TOKEN_URL, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -136,7 +136,7 @@ const App = () => {
         importance: AndroidImportance.HIGH,
       });
 
-      socketRef.current = new WebSocket('ws://192.168.1.41:3003');
+      socketRef.current = new WebSocket(WEBSOCKET_URL);
 
       socketRef.current.onmessage = async event => {
         console.log('Received from server:', event.data);

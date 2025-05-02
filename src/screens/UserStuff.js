@@ -13,7 +13,7 @@ import {
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import {ADD_ZONE_URL} from '@env';
 const UserStuff = props => {
   const [zoneName, setZoneName] = useState('');
   const [zoneFocused, setZoneFocused] = useState(false);
@@ -58,7 +58,7 @@ const UserStuff = props => {
         const token = await AsyncStorage.getItem('userToken');
         const uid = await AsyncStorage.getItem('uid');
 
-        const response = await fetch('http://192.168.1.41:3000/add-zone', {
+        const response = await fetch(ADD_ZONE_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -70,7 +70,6 @@ const UserStuff = props => {
             color: selectedColor,
           }),
         });
-
         if (response.ok) {
           const data = await response.json();
           console.log('Zone added on server:', data);

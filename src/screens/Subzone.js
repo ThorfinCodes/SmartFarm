@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import {ADD_SUBZONE_URL} from '@env';
 const Subzone = props => {
   const [zoneName, setZoneName] = useState('');
   const [zoneFocused, setZoneFocused] = useState(false);
@@ -61,7 +61,7 @@ const Subzone = props => {
           return;
         }
 
-        const response = await fetch('http://192.168.1.41:3000/add-subzone', {
+        const response = await fetch(ADD_SUBZONE_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
