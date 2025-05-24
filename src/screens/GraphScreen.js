@@ -8,44 +8,50 @@ import {SIMULATE_DATA_URL} from '@env';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 const SIZE = screenWidth;
 
-const GraphScreen = ({gasValue, humidity, soilMoisture, temperature}) => {
+const GraphScreen = ({espData}) => {
   const [data, setData] = useState(null);
+
   const [graphs, setGraphs] = useState([]);
   const [labels, setLabels] = useState([]);
-  const [deltaValues, setDeltaValues] = useState({});
+  const [delta, setDelta] = useState();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [tapPosition, setTapPosition] = useState(null);
-  const route = useRoute();
-  const {text} = route.params;
 
+  const route = useRoute();
+  const {text, espId} = route.params;
+  const simpleData = espData[espId] || {};
   const sensorData = {
     Temperature: {
       name: 'Temperature',
       value:
-        typeof temperature === 'number' && !isNaN(temperature)
-          ? temperature.toFixed(1)
+        typeof simpleData.temperature === 'number' &&
+        !isNaN(simpleData.temperature)
+          ? simpleData.temperature.toFixed(1)
           : 'N/A',
       unit: '°C',
     },
     Humidity: {
       name: 'Humidity',
       value:
-        typeof humidity === 'number' && !isNaN(humidity)
-          ? humidity.toFixed(1)
+        typeof simpleData.humidity === 'number' && !isNaN(simpleData.humidity)
+          ? simpleData.humidity.toFixed(1)
           : 'N/A',
       unit: '%',
     },
     soil_moisture: {
       name: 'Soil Moisture',
       value:
-        soilMoisture === true ? 'Wet' : soilMoisture === false ? 'Dry' : 'N/A',
+        simpleData.soilMoisture === 50
+          ? 'Wet'
+          : simpleData.soilMoisture === 0
+          ? 'Dry'
+          : 'N/A',
       unit: '',
     },
     gas_value: {
       name: 'Gas',
       value:
-        typeof gasValue === 'number' && !isNaN(gasValue)
-          ? gasValue.toFixed(1)
+        typeof simpleData.gasValue === 'number' && !isNaN(simpleData.gasValue)
+          ? simpleData.gasValue.toFixed(1)
           : 'N/A',
       unit: 'ppm',
     },
@@ -56,14 +62,21 @@ const GraphScreen = ({gasValue, humidity, soilMoisture, temperature}) => {
     value: 'N/A',
     unit: '',
   };
-
+  console.log('esp data:', simpleData);
+  console.log('esp id:', espId);
+  console.log('data:', selectedSensor);
   useEffect(() => {
     const sensor = text?.toLowerCase();
     if (!sensor) return;
 
     const fetchData = async () => {
       try {
-        const response = await fetch(SIMULATE_DATA_URL + sensor);
+        const url = `${SIMULATE_DATA_URL}?sensor=${encodeURIComponent(
+          sensor,
+        )}&espId=${encodeURIComponent(espId)}`;
+        console.log('✅ Final URL:', url);
+
+        const response = await fetch(url);
         const buffer = await response.arrayBuffer();
         const decodedData = msgpack.decode(new Uint8Array(buffer));
 
@@ -85,7 +98,6 @@ const GraphScreen = ({gasValue, humidity, soilMoisture, temperature}) => {
       const graphData = data.values.map(d => d.value);
       setGraphs(graphData);
 
-      // Generate timestamps and show time every 5 points
       const timeLabels = data.values.map(d => {
         const date = new Date(d.timestamp);
         return date.toLocaleTimeString([], {
@@ -94,18 +106,17 @@ const GraphScreen = ({gasValue, humidity, soilMoisture, temperature}) => {
         });
       });
 
-      // Show time every 5th point
       const reducedLabels = timeLabels.map((label, i) =>
         i % 60 === 0 ? label : '',
       );
 
       setLabels(reducedLabels);
 
-      const delta = graphData.length
+      const deltaValue = graphData.length
         ? graphData[graphData.length - 1] - graphData[0]
         : 0;
 
-      setDeltaValues(delta);
+      setDelta(deltaValue);
     }
   }, [data]);
 
@@ -122,7 +133,7 @@ const GraphScreen = ({gasValue, humidity, soilMoisture, temperature}) => {
       <Header
         title={selectedSensor.name}
         sensorDetails={selectedSensor}
-        delta={deltaValues[currentIndex]}
+        delta={delta}
       />
 
       <View style={styles.chartContainer}>

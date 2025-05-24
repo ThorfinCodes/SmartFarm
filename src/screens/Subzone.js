@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -9,24 +9,47 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Linking,
 } from 'react-native';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ADD_SUBZONE_URL} from '@env';
+import {useNavigation} from '@react-navigation/native';
+
 const Subzone = props => {
+  const navigation = useNavigation();
   const [zoneName, setZoneName] = useState('');
   const [zoneFocused, setZoneFocused] = useState(false);
   const [selectedColor, setSelectedColor] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [zones, setZones] = useState([]);
-
-  const {username, route, subZones} = props;
+  const {username, route, zones, setZones} = props; // get zones and setter from props
   const {zoneId} = route.params;
-
-  console.log('zone id:', zoneId);
-  console.log('subZones:', subZones); // ✅ log the subZones
+  const [espId, setEspId] = useState('');
 
   const zoneUnderline = useState(new Animated.Value(1))[0];
+  const espUnderline = useState(new Animated.Value(1))[0];
+
+  // Get the current zone's subzones from zones prop (no local zones state)
+  const subZones = React.useMemo(() => {
+    const zone = zones.find(z => z.zoneId === zoneId);
+    return zone && zone.subzones ? zone.subzones : [];
+  }, [zones, zoneId]);
+
+  const handleEspFocus = () => {
+    Animated.timing(espUnderline, {
+      toValue: 2,
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const handleEspBlur = () => {
+    Animated.timing(espUnderline, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
+  };
 
   const handleFocus = () => {
     setZoneFocused(true);
@@ -51,7 +74,7 @@ const Subzone = props => {
   };
 
   const handleConfirm = async () => {
-    if (zoneName && selectedColor) {
+    if (zoneName && selectedColor && espId) {
       try {
         const token = await AsyncStorage.getItem('userToken');
         const uid = await AsyncStorage.getItem('uid');
@@ -72,15 +95,34 @@ const Subzone = props => {
             zoneId: zoneId,
             name: zoneName,
             color: selectedColor,
+            espId: espId,
           }),
         });
 
         const data = await response.json();
 
         if (response.ok && data.success) {
-          const newZone = {name: zoneName, color: selectedColor};
-          setZones([...zones, newZone]);
+          const newSubZone = {
+            name: zoneName,
+            color: selectedColor,
+            espId: espId,
+            subzoneId: data.subzoneId,
+          };
+
+          // Add newSubZone under the correct zone using setZones from props
+          setZones(prevZones =>
+            prevZones.map(zone =>
+              zone.zoneId === zoneId
+                ? {
+                    ...zone,
+                    subzones: [...(zone.subzones || []), newSubZone],
+                  }
+                : zone,
+            ),
+          );
+
           setZoneName('');
+          setEspId('');
           setSelectedColor(null);
           setIsModalVisible(false);
         } else {
@@ -92,6 +134,8 @@ const Subzone = props => {
       } catch (error) {
         console.error('Error adding subzone:', error);
       }
+    } else {
+      console.warn('Please fill in all required fields.');
     }
   };
 
@@ -102,30 +146,47 @@ const Subzone = props => {
           <Text style={styles.title}>Sous zone,</Text>
           <Text style={styles.title}>{username}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.AddBtn}
-          onPress={() => setIsModalVisible(true)}>
-          <Text style={styles.plus}>+</Text>
-        </TouchableOpacity>
+        <View style={styles.TopButtons}>
+          <TouchableOpacity
+            style={styles.AddBtn}
+            onPress={() => setIsModalVisible(true)}>
+            <Text style={styles.plus}>+</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.AddBtn}
+            onPress={() => {
+              Linking.openURL(
+                'https://half-cherry-kingfisher.glitch.me/index.html',
+              ); // Replace with your desired URL
+            }}>
+            <Text style={styles.plus}>★</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.ZoneContainer}>
         {subZones.map((subZone, index) => (
-          <View
-            key={subZone.subZoneId || index}
-            style={[styles.Zone, {backgroundColor: subZone.color}]}>
-            <Text
-              style={{
-                color: 'black',
-                fontFamily: 'Poppins-Bold',
-                fontSize: 25,
-              }}>
-              {subZone.name}
-            </Text>
-            <View style={styles.BtnZone}>
-              <ArrowAwjaDown color="white" />
+          <TouchableOpacity
+            key={subZone.subzoneId || index}
+            onPress={() => {
+              console.log('Navigating to Home with espId:', subZone.espId);
+              navigation.navigate('Home', {espId: subZone.espId});
+            }}
+            activeOpacity={0.8}>
+            <View style={[styles.Zone, {backgroundColor: subZone.color}]}>
+              <Text
+                style={{
+                  color: 'black',
+                  fontFamily: 'Poppins-Bold',
+                  fontSize: 25,
+                }}>
+                {subZone.name}
+              </Text>
+              <View style={styles.BtnZone}>
+                <ArrowAwjaDown color="white" />
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
 
@@ -157,6 +218,24 @@ const Subzone = props => {
                   styles.underline,
                   {
                     height: zoneUnderline,
+                    backgroundColor: '#F9865B',
+                  },
+                ]}
+              />
+              <TextInput
+                placeholder="ESP ID"
+                placeholderTextColor="#F9865B"
+                value={espId}
+                onChangeText={setEspId}
+                style={styles.input}
+                onFocus={handleEspFocus}
+                onBlur={handleEspBlur}
+              />
+              <Animated.View
+                style={[
+                  styles.underline,
+                  {
+                    height: espUnderline,
                     backgroundColor: '#F9865B',
                   },
                 ]}
@@ -201,8 +280,10 @@ const styles = StyleSheet.create({
     paddingTop: 50,
   },
   TopText: {
+    flexDirection: 'row',
     flexDirection: 'column',
   },
+
   AddBtn: {
     backgroundColor: 'white',
     width: 60,

@@ -19,17 +19,11 @@ const UserStuff = props => {
   const [zoneFocused, setZoneFocused] = useState(false);
   const [selectedColor, setSelectedColor] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [zones, setZones] = useState([]);
+
+  const {username, zones, setZones} = props; // get zones & setter from props
   const navigation = useNavigation();
   const zoneUnderline = useState(new Animated.Value(1))[0];
 
-  const {username, zones: incomingZones} = props;
-  console.log('zones:', zones);
-  useEffect(() => {
-    if (props.zones && props.zones.length > 0) {
-      setZones([...props.zones]);
-    }
-  }, [props.zones]);
   const handleFocus = () => {
     setZoneFocused(true);
     Animated.timing(zoneUnderline, {
@@ -62,19 +56,25 @@ const UserStuff = props => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`, // sending token in Authorization header
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            uid: uid,
+            uid,
             name: zoneName,
             color: selectedColor,
           }),
         });
+
         if (response.ok) {
           const data = await response.json();
           console.log('Zone added on server:', data);
 
-          setZones([...zones, {name: zoneName, color: selectedColor}]);
+          // **Use the passed setZones to update the global zones state**
+          setZones([
+            ...zones,
+            {name: zoneName, color: selectedColor, zoneId: data.zoneId},
+          ]);
+
           setZoneName('');
           setSelectedColor(null);
           setIsModalVisible(false);
@@ -104,7 +104,7 @@ const UserStuff = props => {
       <View style={styles.ZoneContainer}>
         <FlatList
           data={zones}
-          keyExtractor={item => item.zoneId.toString()} // Using zoneId as the unique key
+          keyExtractor={item => item.zoneId.toString()}
           renderItem={({item}) => (
             <TouchableOpacity
               onPress={() =>

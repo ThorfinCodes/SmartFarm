@@ -7,7 +7,7 @@ const espWs = new WebSocket('ws://192.168.1.34:3003');
 let pumpEnabled = false;
 let motionDetectorEnabled = false;
 
-const espId = '1QCAJZPY';
+const espId = '4BRBXDZV';
 
 console.log(`Initial Pump Status: ${pumpEnabled ? 'ON' : 'OFF'}`);
 console.log(
@@ -74,7 +74,7 @@ setInterval(() => {
   const motionMessage = {
     type: 'MOTION_DETECTED',
     esp_id: espId,
-    value: false,
+    value: motionDetected,
   };
 
   espWs.send(JSON.stringify(motionMessage));

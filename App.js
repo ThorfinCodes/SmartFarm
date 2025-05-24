@@ -20,16 +20,13 @@ import {VERIFY_TOKEN_URL, WEBSOCKET_URL} from '@env';
 const Stack = createNativeStackNavigator();
 
 const App = () => {
-  const [gasValue, setGasValue] = useState(null);
-  const [humidity, setHumidity] = useState(null);
-  const [soilMoisture, setSoilMoisture] = useState(null);
-  const [temperature, setTemperature] = useState(null);
   const [isArrosageEnabled, setIsArrosageEnabled] = useState(false);
   const [initialRoute, setInitialRoute] = useState(null);
   const [username, setUsername] = useState('');
   const [zones, setZones] = useState([]);
-  const [subZones, setSubZones] = useState([]);
+
   const socketRef = useRef(null);
+  const [espData, setEspData] = useState({});
   let lastAlertTime = Date.now(); // To track time of the last alert
 
   // Load the sound file
@@ -58,8 +55,10 @@ const App = () => {
           const uid = user.uid; // Get the UID
 
           // Store the refreshed token and UID
-          await AsyncStorage.setItem('userToken', token);
-          await AsyncStorage.setItem('uid', uid);
+          await Promise.all([
+            AsyncStorage.setItem('userToken', token),
+            AsyncStorage.setItem('uid', uid),
+          ]);
 
           const res = await fetch(VERIFY_TOKEN_URL, {
             method: 'POST',
@@ -80,29 +79,25 @@ const App = () => {
 
             const userZones = result.user.zones
               ? Object.entries(result.user.zones).map(([zoneId, zone]) => ({
-                  zoneId, // Add the zoneId here
+                  zoneId,
                   name: zone.name,
                   color: zone.color,
-                }))
-              : []; // convert { zoneId: {name, color}, ... } → [{zoneId, name, color}, ...]
-            const userSubZones = result.user.zones
-              ? Object.entries(result.user.zones).flatMap(([_, zone]) =>
-                  zone.subzones
+                  subzones: zone.subzones
                     ? Object.entries(zone.subzones).map(
-                        ([subZoneId, subZone]) => ({
-                          subZoneId,
+                        ([subzoneId, subZone]) => ({
+                          subzoneId,
                           name: subZone.name,
                           color: subZone.color,
+                          espId: subZone.espId, // <-- Add espId here!
                         }),
                       )
                     : [],
-                )
+                }))
               : [];
-            console.log('app zones:', userZones);
-            console.log('app subzones:', userSubZones);
 
             setZones(userZones);
-            setSubZones(userSubZones);
+            console.log('app zones:', userZones);
+
             setInitialRoute('MyStuff');
           } else {
             await AsyncStorage.removeItem('userToken');
@@ -137,10 +132,18 @@ const App = () => {
       });
 
       socketRef.current = new WebSocket(WEBSOCKET_URL);
-
+      // Send REGISTER message as soon as socket opens
+      socketRef.current.onopen = () => {
+        // Get uid from AsyncStorage (or wherever you saved it)
+        AsyncStorage.getItem('uid').then(uid => {
+          if (uid) {
+            socketRef.current.send(JSON.stringify({type: 'REGISTER', uid}));
+            console.log(`Sent REGISTER with UID: ${uid}`);
+          } else {
+          }
+        });
+      };
       socketRef.current.onmessage = async event => {
-        console.log('Received from server:', event.data);
-
         const data = JSON.parse(event.data);
 
         if (data.type === 'PUMP_STATUS') {
@@ -169,10 +172,18 @@ const App = () => {
             lastAlertTime = currentTime;
           }
         }
-        setGasValue(data.gas_value);
-        setHumidity(data.humidity);
-        setSoilMoisture(data.soil_moisture);
-        setTemperature(data.temperature);
+        if (!data.espId) return; // Skip if no ESP ID (safety check)
+
+        setEspData(prev => ({
+          ...prev,
+          [data.espId]: {
+            ...(prev[data.espId] || {}),
+            gasValue: data.gas_value,
+            humidity: data.humidity,
+            soilMoisture: data.soil_moisture,
+            temperature: data.temperature,
+          },
+        }));
       };
 
       return () => {
@@ -189,13 +200,28 @@ const App = () => {
       </View>
     );
   }
-  const UserStuffWithUsername = ({username, zones, ...props}) => {
-    return <UserStuff {...props} username={username} zones={zones} />;
+  const UserStuffWithUsername = ({username, zones, setZones, ...props}) => {
+    return (
+      <UserStuff
+        {...props}
+        username={username}
+        zones={zones}
+        setZones={setZones}
+      />
+    );
   };
 
-  const SubzoneWithUsername = ({username, subZones, ...props}) => {
-    return <Subzone {...props} username={username} subZones={subZones} />;
+  const SubzoneWithUsername = ({username, zones, setZones, ...props}) => {
+    return (
+      <Subzone
+        {...props}
+        username={username}
+        zones={zones}
+        setZones={setZones}
+      />
+    );
   };
+
   return (
     <GestureHandlerRootView style={{flex: 1}}>
       <NavigationContainer>
@@ -210,10 +236,7 @@ const App = () => {
             {props => (
               <HomeScreen
                 {...props}
-                gasValue={gasValue}
-                humidity={humidity}
-                soilMoisture={soilMoisture}
-                temperature={temperature}
+                espData={espData}
                 isArrosageEnabled={isArrosageEnabled}
                 socketRef={socketRef}
               />
@@ -226,6 +249,7 @@ const App = () => {
                 {...props}
                 username={username}
                 zones={zones}
+                setZones={setZones} // <-- pass setter here
               />
             )}
           </Stack.Screen>
@@ -235,20 +259,14 @@ const App = () => {
               <SubzoneWithUsername
                 {...props}
                 username={username}
-                subZones={subZones}
+                zones={zones}
+                setZones={setZones} // <-- pass setter here too
               />
             )}
           </Stack.Screen>
           <Stack.Screen name="Graph" options={{animation: 'fade_from_bottom'}}>
             {props => (
-              <GraphScreen
-                {...props}
-                gasValue={gasValue}
-                humidity={humidity}
-                soilMoisture={soilMoisture}
-                temperature={temperature}
-                socketRef={socketRef}
-              />
+              <GraphScreen {...props} espData={espData} socketRef={socketRef} />
             )}
           </Stack.Screen>
         </Stack.Navigator>

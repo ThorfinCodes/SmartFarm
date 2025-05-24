@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -16,26 +16,40 @@ import ArrowDown from '../icones/ArrowDown.svg';
 import ArrowAwjaOrange from '../icones/ArrowAwjaOrange.svg';
 import ArrowAwjaMauve from '../icones/ArrowAwjaMauve.svg';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 
 import {RFValue} from 'react-native-responsive-fontsize';
 import {Dimensions} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
-const HomeScreen = ({
-  gasValue,
-  humidity,
-  soilMoisture,
-  temperature,
-  isArrosageEnabled,
-  socketRef,
-}) => {
+const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const espId = route.params?.espId;
+
+  // Get the data for current espId or empty object
+  const data = espData[espId] || {};
 
   // Local state initialized with prop
   const [isArrosageOn, setIsArrosageOn] = useState(isArrosageEnabled);
   const [isAirConditionerEnabled, setIsAirConditionerEnabled] = useState(false);
   const [isMotionDetectorEnabled, setIsMotionDetectorEnabled] = useState(false);
 
+  const [uid, setUid] = useState(null);
+
+  // Load uid from AsyncStorage once when component mounts
+  useEffect(() => {
+    const loadUid = async () => {
+      try {
+        const storedUid = await AsyncStorage.getItem('uid');
+        if (storedUid) setUid(storedUid);
+        else console.warn('UID not found in AsyncStorage');
+      } catch (error) {
+        console.error('Error reading uid from AsyncStorage', error);
+      }
+    };
+    loadUid();
+  }, []);
   const handleMotionSwitchToggle = () => {
     const newValue = !isMotionDetectorEnabled;
 
@@ -48,6 +62,8 @@ const HomeScreen = ({
         JSON.stringify({
           type: 'TOGGLE_MOTION_DETECTOR',
           value: newValue,
+          uid, // include uid here
+          espId, // include espId here
         }),
       );
     } else {
@@ -66,6 +82,8 @@ const HomeScreen = ({
         JSON.stringify({
           type: 'TOGGLE_PUMP',
           value: newValue,
+          uid, // include uid here
+          espId, // include espId here
         }),
       );
     } else {
@@ -134,9 +152,9 @@ const HomeScreen = ({
               Air Conditioner
             </Text>
 
-            {temperature != null ? (
+            {data.temperature != null ? (
               <Text style={{fontFamily: 'Poppins-Bold', fontSize: RFValue(54)}}>
-                {temperature + '°C'}
+                {data.temperature + '°C'}
               </Text>
             ) : (
               <ActivityIndicator
@@ -178,6 +196,7 @@ const HomeScreen = ({
               onPress={() =>
                 navigation.navigate('Graph', {
                   text: 'Temperature',
+                  espId: espId,
                 })
               }
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
@@ -200,7 +219,7 @@ const HomeScreen = ({
                 fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {temperature ? temperature : 'Loading...'}°C
+              {data.temperature ? data.temperature : 'Loading...'}°C
             </Text>
           </View>
         </View>
@@ -221,9 +240,9 @@ const HomeScreen = ({
                 fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {soilMoisture === 50
+              {data.soilMoisture === 50
                 ? 'Wet'
-                : soilMoisture === 0
+                : data.soilMoisture === 0
                 ? 'Dry'
                 : 'Loading...'}
             </Text>
@@ -232,6 +251,7 @@ const HomeScreen = ({
             onPress={() =>
               navigation.navigate('Graph', {
                 text: 'soil_moisture',
+                espId: espId,
               })
             }
             style={{
@@ -261,13 +281,14 @@ const HomeScreen = ({
                 fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {gasValue ? `${gasValue} ppm` : 'Loading...'}
+              {data.gasValue ? `${data.gasValue} ppm` : 'Loading...'}
             </Text>
           </View>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('Graph', {
                 text: 'gas_value',
+                espId: espId,
               })
             }
             style={{
@@ -288,6 +309,7 @@ const HomeScreen = ({
               onPress={() =>
                 navigation.navigate('Graph', {
                   text: 'Humidity',
+                  espId: espId,
                 })
               }
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
@@ -310,7 +332,7 @@ const HomeScreen = ({
                 fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {humidity ? humidity : 'Loading...'} g/m³
+              {data.humidity ? data.humidity : 'Loading...'} g/m³
             </Text>
           </View>
         </View>
