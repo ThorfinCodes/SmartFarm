@@ -18,6 +18,7 @@ import auth, {
   signInWithEmailAndPassword,
 } from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {GET_USERNAME_URL} from '@env';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 const IdentificationScreen = () => {
   const [email, setEmail] = useState('');
@@ -77,9 +78,6 @@ const IdentificationScreen = () => {
     setError('');
 
     try {
-      // Log the credentials (for debugging purposes only)
-      console.log('User credentials:', {email, password});
-
       // Firebase authentication
       const auth = getAuth();
       const userCredential = await signInWithEmailAndPassword(
@@ -92,19 +90,36 @@ const IdentificationScreen = () => {
       // Get ID token
       const token = await user.getIdToken();
 
-      // Log token and UID
-      console.log('Login successful!');
-      console.log('User Email:', user.email);
-      console.log('UID:', user.uid);
-
-      console.log('Token:', token);
-
-      // 🧠 Save token + uid to AsyncStorage
+      // Save token + uid to AsyncStorage
       await AsyncStorage.setItem('userToken', token);
       await AsyncStorage.setItem('uid', user.uid);
 
-      // Navigate to your desired screen
-      navigation.navigate('MyStuff');
+      // Now request username from your server
+      const response = await fetch(GET_USERNAME_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({uid: user.uid}),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch username');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to get username');
+      }
+
+      const username = data.username;
+
+      console.log('Fetched username:', username);
+
+      // Navigate to your desired screen with username
+      navigation.navigate('MyStuff', {username});
     } catch (err) {
       console.error('Error during login:', err);
       setError('Email ou mot de passe incorrect.');
@@ -112,6 +127,7 @@ const IdentificationScreen = () => {
       setIsLoading(false);
     }
   };
+
   return (
     <View style={styles.container}>
       <View style={styles.TopSc}>

@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
@@ -23,13 +24,14 @@ import {Dimensions} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
+  const [autoMode, setAutoMode] = useState(false);
   const navigation = useNavigation();
   const route = useRoute();
   const espId = route.params?.espId;
 
   // Get the data for current espId or empty object
   const data = espData[espId] || {};
-
+  console.log('data:', data);
   // Local state initialized with prop
   const [isArrosageOn, setIsArrosageOn] = useState(isArrosageEnabled);
   const [isAirConditionerEnabled, setIsAirConditionerEnabled] = useState(false);
@@ -88,6 +90,46 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
       );
     } else {
       console.warn('WebSocket is not open. Cannot send message.');
+    }
+  };
+  const handleAirConditionerToggle = () => {
+    const newValue = !isAirConditionerEnabled;
+
+    // Update local state
+    setIsAirConditionerEnabled(newValue);
+
+    // Send message through WebSocket
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'TOGGLE_FAN',
+          value: newValue,
+          uid, // include uid here
+          espId, // include espId here
+        }),
+      );
+    } else {
+      console.warn('WebSocket is not open. Cannot send FAN_STATUS message.');
+    }
+  };
+  const handleAirModeToggle = () => {
+    const newMode = !autoMode;
+
+    // Update local state
+    setAutoMode(newMode);
+
+    // Send mode change to server
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'SET_AC_MODE',
+          mode: newMode ? 'auto' : 'manual', // Send string form for clarity
+          uid,
+          espId,
+        }),
+      );
+    } else {
+      console.warn('WebSocket is not open. Cannot send AC mode change.');
     }
   };
   return (
@@ -163,16 +205,45 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 style={{padding: 26}}
               />
             )}
-
-            <RNSwitch
-              value={isAirConditionerEnabled}
-              handleOnPress={() =>
-                setIsAirConditionerEnabled(!isAirConditionerEnabled)
-              }
-              activeTrackColor="green"
-              inActiveTrackColor="gray"
-              thumbColor="white"
-            />
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 8,
+                marginBottom: 8,
+              }}>
+              <TouchableOpacity
+                onPress={handleAirModeToggle}
+                style={{
+                  backgroundColor: autoMode ? '#4CAF50' : '#ccc',
+                  paddingVertical: 6,
+                  paddingHorizontal: 14,
+                  borderRadius: 20,
+                }}>
+                <Text
+                  style={{
+                    color: 'white',
+                    fontFamily: 'Poppins-Bold',
+                    fontSize: RFValue(14),
+                  }}>
+                  {autoMode ? 'Auto' : 'Manual'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableWithoutFeedback
+              disabled={!autoMode} // disables this blocking layer if manual
+              onPress={() => {}} // capture touches and do nothing
+            >
+              <View pointerEvents={autoMode ? 'none' : 'auto'}>
+                <RNSwitch
+                  value={isAirConditionerEnabled}
+                  handleOnPress={handleAirConditionerToggle}
+                  activeTrackColor="green"
+                  inActiveTrackColor="gray"
+                  thumbColor="white"
+                />
+              </View>
+            </TouchableWithoutFeedback>
           </View>
 
           <View style={styles.Bento2Right}>

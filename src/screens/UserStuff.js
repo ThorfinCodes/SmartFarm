@@ -11,7 +11,7 @@ import {
   FlatList,
 } from 'react-native';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ADD_ZONE_URL} from '@env';
 const UserStuff = props => {
@@ -20,8 +20,14 @@ const UserStuff = props => {
   const [selectedColor, setSelectedColor] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const {username, zones, setZones} = props; // get zones & setter from props
+  const route = useRoute();
   const navigation = useNavigation();
+
+  const routeUsername = route.params?.username;
+  const {username: propUsername, zones, setZones} = props;
+
+  const username = routeUsername || propUsername;
+
   const zoneUnderline = useState(new Animated.Value(1))[0];
 
   const handleFocus = () => {

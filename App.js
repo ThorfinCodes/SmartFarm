@@ -132,6 +132,7 @@ const App = () => {
       });
 
       socketRef.current = new WebSocket(WEBSOCKET_URL);
+
       // Send REGISTER message as soon as socket opens
       socketRef.current.onopen = () => {
         // Get uid from AsyncStorage (or wherever you saved it)

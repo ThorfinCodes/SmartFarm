@@ -14,6 +14,7 @@ import ArrowDroite from '../icones/ArrowDroite.svg';
 import {useNavigation} from '@react-navigation/native';
 import {RFValue} from 'react-native-responsive-fontsize';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {SIGNUP_URL} from '@env';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 const SignupScreen = () => {
   const [email, setEmail] = useState('');
@@ -110,7 +111,7 @@ const SignupScreen = () => {
     setError('');
 
     try {
-      const response = await fetch('http://192.168.1.34:3000/signup', {
+      const response = await fetch(SIGNUP_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +128,7 @@ const SignupScreen = () => {
         await AsyncStorage.setItem('userToken', data.token);
         await AsyncStorage.setItem('uid', data.uid);
 
-        navigation.navigate('MyStuff');
+        navigation.navigate('MyStuff', {username});
       } else {
         setError(data.message || 'An error occurred during signup.');
       }

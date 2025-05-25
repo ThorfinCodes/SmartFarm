@@ -1,11 +1,35 @@
 const express = require('express');
 const compression = require('compression');
 const app = express();
-const PORT = 3000;
-const WS_PORT = 3003;
+const PORT = process.env.PORT || 3000;
+
 const admin = require('./firebase');
 const msgpack = require('msgpack5')();
 const db = admin.database();
+/* if (sensorData.pir_status) {
+    console.log('movement detected');
+    alertsToSend.push('Motion detected (PIR active)');
+  }
+
+  if (sensorData.temperature < 10) {
+    alertsToSend.push('Temperature too low (< 10°C)');
+  } else if (sensorData.temperature > 35) {
+    alertsToSend.push('Temperature too high (> 35°C)');
+  }
+
+  if (sensorData.humidity < 40) {
+    alertsToSend.push('Humidity too low (< 40%)');
+  } else if (sensorData.humidity > 85) {
+    alertsToSend.push('Humidity too high (> 85%)');
+  }
+
+  if (sensorData.soil_moisture === 0) {
+    alertsToSend.push('Soil is dry! Please water the plant.');
+  }
+
+  if (sensorData.gas_value > GAS_THRESHOLD) {
+    alertsToSend.push('Gas level too high (> 300)');
+  }*/
 
 const WebSocket = require('ws'); // Import WebSocket
 app.use(express.json());
@@ -14,7 +38,10 @@ app.use(compression());
 const clientRegistry = {};
 let pumpEnabled = false;
 // Shared data that updates every second
-
+const TEMPERATURE_THRESHOLD = 15;
+const DRY_THRESHOLD = 500;
+const WATER_THRESHOLD = 500;
+const GAS_THRESHOLD = 400;
 const sensorDataHistory = {};
 
 async function initializeClientRegistry() {
@@ -55,14 +82,13 @@ async function startServer() {
   await initializeClientRegistry();
 
   // Start HTTP server for Express
-  app.listen(PORT, () => {
-    console.log(`HTTP server running on http://localhost:${PORT}`);
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 
-  // Start WebSocket server and attach to same HTTP server or separate port
-  // If you want WS on a separate port:
-  const wss = new WebSocket.Server({port: WS_PORT});
-  console.log(`WebSocket server running on ws://localhost:${WS_PORT}`);
+  // Attach websocket server to same HTTP server on port 3000
+  const wss = new WebSocket.Server({server});
+  console.log(`WebSocket server running on ws://localhost:${PORT}`);
   wss.on('connection', ws => {
     console.log('Client connected to WebSocket');
 
@@ -70,6 +96,7 @@ async function startServer() {
     ws.on('message', message => {
       try {
         const parsed = JSON.parse(message);
+
         if (parsed.type === 'REGISTER') {
           const uid = parsed.uid;
           if (uid) {
@@ -81,6 +108,30 @@ async function startServer() {
             }
           } else {
             console.warn('REGISTER message missing uid');
+          }
+        }
+        if (parsed.type === 'TOGGLE_FAN') {
+          const {uid, espId, value} = parsed;
+          if (!uid || !espId) {
+            console.warn('FAN_STATUS missing uid or espId');
+            return;
+          }
+          const fanEnabled = value;
+          console.log(`Fan turned ${fanEnabled ? 'ON' : 'OFF'}`);
+
+          const espSocket = clientRegistry[uid]?.esps?.[espId]?.socket;
+          if (espSocket && espSocket.readyState === WebSocket.OPEN) {
+            espSocket.send(
+              JSON.stringify({
+                type: 'FAN_STATUS',
+                value: fanEnabled,
+              }),
+            );
+            console.log(`Sent FAN_STATUS to ESP ID ${espId} for UID ${uid}`);
+          } else {
+            console.warn(
+              `ESP socket not found or closed for UID ${uid} ESP ID ${espId}`,
+            );
           }
         }
         if (parsed.type === 'TOGGLE_PUMP') {
@@ -170,12 +221,41 @@ async function startServer() {
             );
           }
         }
+        if (parsed.type === 'SET_AC_MODE') {
+          const {uid, espId, mode} = parsed;
+          if (!uid || !espId || typeof mode === 'undefined') {
+            console.warn('SET_AC_MODE missing uid, espId, or mode');
+            return;
+          }
+
+          const espSocket = clientRegistry[uid]?.esps?.[espId]?.socket;
+          if (espSocket && espSocket.readyState === WebSocket.OPEN) {
+            // Convert mode to boolean for ESP: auto = true, manual = false
+            const isAuto = mode === 'auto';
+
+            espSocket.send(
+              JSON.stringify({
+                type: 'SET_FAN_MODE',
+                mode: isAuto,
+              }),
+            );
+
+            console.log(
+              `Sent SET_FAN_MODE (${
+                isAuto ? 'AUTO' : 'MANUAL'
+              }) to ESP ID ${espId} for UID ${uid}`,
+            );
+          } else {
+            console.warn(
+              `ESP socket not found or closed for UID ${uid} ESP ID ${espId}`,
+            );
+          }
+        }
         // Handle SENSOR_INFO updates from ESP
         if (parsed.type === 'SENSOR_INFO') {
-          if (parsed.esp_Id && !parsed.espId) {
-            parsed.espId = parsed.esp_Id;
-          }
-          const senderEspId = parsed.espId;
+          console.log('message parsed:', parsed);
+
+          const senderEspId = parsed.esp_id;
           let ownerUid = null;
           for (const uid in clientRegistry) {
             if (clientRegistry[uid].esps.includes(senderEspId)) {
@@ -185,12 +265,32 @@ async function startServer() {
           }
 
           if (ownerUid) {
-            // Save the ESP socket in clientRegistry under that ESP ID
+            // Ensure ESP record exists
             clientRegistry[ownerUid].esps[senderEspId] =
               clientRegistry[ownerUid].esps[senderEspId] || {};
+
+            // Save ESP socket
             clientRegistry[ownerUid].esps[senderEspId].socket = ws;
-          } else {
-            console.warn(`ESP ID ${senderEspId} not found in registry`);
+
+            // Only send thresholds once per ESP connection
+            if (!clientRegistry[ownerUid].esps[senderEspId].thresholdSent) {
+              if (ws.readyState === WebSocket.OPEN) {
+                console.log('esp connected');
+                ws.send(
+                  JSON.stringify({
+                    type: 'THRESHOLDS',
+                    thresholds: {
+                      TEMPERATURE_THRESHOLD,
+                      DRY_THRESHOLD,
+                      WATER_THRESHOLD,
+                      GAS_THRESHOLD,
+                    },
+                  }),
+                );
+                console.log(`Sent thresholds to ESP ID ${senderEspId}`);
+                clientRegistry[ownerUid].esps[senderEspId].thresholdSent = true;
+              }
+            }
           }
           const flooredSensorData = {
             ...parsed.value,
@@ -199,9 +299,7 @@ async function startServer() {
             soil_moisture: parsed.value?.soil_moisture === true ? 50 : 0,
             gas_value: safeFloor(parsed.value?.gas_value),
           };
-
-          sharedSensorData = flooredSensorData;
-
+          console.log('message from esp ', senderEspId, ':', flooredSensorData);
           // Save per ESP into history
           if (!sensorDataHistory[senderEspId]) {
             sensorDataHistory[senderEspId] = [];
@@ -222,11 +320,7 @@ async function startServer() {
             const ownerSocket = clientRegistry[ownerUid]?.socket;
             if (ownerSocket && ownerSocket.readyState === WebSocket.OPEN) {
               ownerSocket.send(JSON.stringify(dataToSend));
-            } else {
-              console.warn(`Owner UID ${ownerUid} socket is not open`);
             }
-          } else {
-            console.warn('No owner found for ESP ID, sensor data not sent');
           }
         }
       } catch (err) {
@@ -250,6 +344,7 @@ async function startServer() {
               console.log(
                 `Nulling ESP socket for ESP ID: ${espId} under UID: ${uid}`,
               );
+              esps[espId].thresholdSent = false;
               esps[espId].socket = null;
             }
           }
@@ -382,6 +477,55 @@ app.post('/verify-token', async (req, res) => {
     return res.status(401).json({valid: false, message: 'Invalid token'});
   }
 });
+app.post('/get-username', async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Invalid or missing token');
+    return res
+      .status(401)
+      .json({success: false, message: 'Missing or invalid token'});
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  const {uid} = req.body;
+
+  if (!uid) {
+    return res.status(400).json({success: false, message: 'UID is required'});
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    if (decodedToken.uid !== uid) {
+      return res.status(403).json({success: false, message: 'UID mismatch'});
+    }
+
+    const userRef = admin.database().ref(`users/${uid}/username`);
+    const usernameSnapshot = await userRef.once('value');
+
+    if (!usernameSnapshot.exists()) {
+      return res
+        .status(404)
+        .json({success: false, message: 'Username not found'});
+    }
+
+    const username = usernameSnapshot.val();
+
+    console.log(`Username fetched for user ${uid}:`, username);
+
+    return res.status(200).json({
+      success: true,
+      username,
+    });
+  } catch (err) {
+    console.error('Error fetching username:', err);
+    return res
+      .status(500)
+      .json({success: false, message: 'Internal server error'});
+  }
+});
+
 app.post('/add-zone', async (req, res) => {
   const authHeader = req.headers.authorization;
 
@@ -586,7 +730,7 @@ app.get('/simulate-data', async (req, res) => {
         }))
         .filter(entry => entry.value !== null);
     }
-    console.log('Filtered data to send:', filteredData);
+
     const response = {values: filteredData};
     const binaryData = msgpack.encode(response);
     res.send(binaryData);

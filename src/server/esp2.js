@@ -1,13 +1,13 @@
 const WebSocket = require('ws');
 
 // Simulate the ESP device (local WebSocket client)
-const espWs = new WebSocket('ws://192.168.1.34:3003');
+const espWs = new WebSocket('ws://192.168.1.34:3000');
 
 // State variables for pump and motion detector
 let pumpEnabled = false;
 let motionDetectorEnabled = false;
 
-const espId = '4BRBXDZV';
+const esp_id = 'A7GFNUCK';
 
 console.log(`Initial Pump Status: ${pumpEnabled ? 'ON' : 'OFF'}`);
 console.log(
@@ -25,7 +25,12 @@ espWs.on('message', message => {
         `Received PUMP_STATUS: Pump turned ${pumpEnabled ? 'ON' : 'OFF'}`,
       );
     }
-
+    if (parsed.type === 'FAN_STATUS') {
+      const fanEnabled = parsed.value;
+      console.log(
+        `Received FAN_STATUS: Fan turned ${fanEnabled ? 'ON' : 'OFF'}`,
+      );
+    }
     if (parsed.type === 'MOTION_DETECTOR_STATUS') {
       motionDetectorEnabled = parsed.value;
       console.log(
@@ -33,6 +38,16 @@ espWs.on('message', message => {
           motionDetectorEnabled ? 'ON' : 'OFF'
         }`,
       );
+    }
+    if (parsed.type === 'THRESHOLDS') {
+      console.log('📥 Received Thresholds from Server:');
+      console.log(
+        `TEMPERATURE_THRESHOLD: ${parsed.thresholds.TEMPERATURE_THRESHOLD}`,
+      );
+      console.log(`WET_THRESHOLD: ${parsed.thresholds.WET_THRESHOLD}`);
+      console.log(`DRY_THRESHOLD: ${parsed.thresholds.DRY_THRESHOLD}`);
+      console.log(`WATER_THRESHOLD: ${parsed.thresholds.WATER_THRESHOLD}`);
+      console.log(`GAS_THRESHOLD: ${parsed.thresholds.GAS_THRESHOLD}`);
     }
   } catch (err) {
     console.error('Error parsing message:', err);
@@ -50,7 +65,7 @@ setInterval(() => {
 
   const simulatedData = {
     type: 'SENSOR_INFO',
-    espId,
+    esp_id,
     value: {
       gas_value: Math.floor(Math.random() * 100),
       humidity: Math.floor(Math.random() * 100),
@@ -73,7 +88,7 @@ setInterval(() => {
 
   const motionMessage = {
     type: 'MOTION_DETECTED',
-    esp_id: espId,
+    esp_id: esp_id,
     value: motionDetected,
   };
 
