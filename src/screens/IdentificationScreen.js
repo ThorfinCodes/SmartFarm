@@ -115,7 +115,7 @@ const IdentificationScreen = () => {
       }
 
       const username = data.username;
-
+      await AsyncStorage.setItem('username', username);
       console.log('Fetched username:', username);
 
       // Navigate to your desired screen with username

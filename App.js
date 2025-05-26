@@ -179,10 +179,12 @@ const App = () => {
           ...prev,
           [data.espId]: {
             ...(prev[data.espId] || {}),
-            gasValue: data.gas_value,
+            temperature: data.temperature,
             humidity: data.humidity,
             soilMoisture: data.soil_moisture,
-            temperature: data.temperature,
+            soilMoistureValue: data.soil_moisture_value,
+            gasValue: data.gas_value,
+            waterLevel: data.water_level,
           },
         }));
       };
@@ -212,13 +214,20 @@ const App = () => {
     );
   };
 
-  const SubzoneWithUsername = ({username, zones, setZones, ...props}) => {
+  const SubzoneWithUsername = ({
+    username,
+    zones,
+    setZones,
+    espData,
+    ...props
+  }) => {
     return (
       <Subzone
         {...props}
         username={username}
         zones={zones}
         setZones={setZones}
+        espData={espData} // <--- forward espData here
       />
     );
   };
@@ -254,14 +263,14 @@ const App = () => {
               />
             )}
           </Stack.Screen>
-
           <Stack.Screen name="MySubzone">
             {props => (
-              <SubzoneWithUsername
+              <Subzone
                 {...props}
                 username={username}
                 zones={zones}
-                setZones={setZones} // <-- pass setter here too
+                setZones={setZones}
+                espData={espData}
               />
             )}
           </Stack.Screen>

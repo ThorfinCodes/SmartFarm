@@ -1,18 +1,13 @@
 const WebSocket = require('ws');
 
 // Simulate the ESP device (local WebSocket client)
+const espWs = new WebSocket('ws://192.168.1.34:3000');
 
-const espWs = new WebSocket('wss://tulip-half-dormouse.glitch.me', {
-  headers: {
-    Origin: 'https://tulip-half-dormouse.glitch.me',
-    'User-Agent': 'Mozilla/5.0 (Node.js ws client)',
-  },
-});
 // State variables for pump and motion detector
 let pumpEnabled = false;
 let motionDetectorEnabled = false;
 
-const esp_id = 'GGKZ9QFE';
+const esp_id = '9H286W6K';
 
 console.log(`Initial Pump Status: ${pumpEnabled ? 'ON' : 'OFF'}`);
 console.log(
@@ -54,13 +49,6 @@ espWs.on('message', message => {
       console.log(`WATER_THRESHOLD: ${parsed.thresholds.WATER_THRESHOLD}`);
       console.log(`GAS_THRESHOLD: ${parsed.thresholds.GAS_THRESHOLD}`);
     }
-    if (parsed.type === 'SET_FAN_AUTO') {
-      console.log(
-        `📥 Received SET_FAN_AUTO: AC Mode is set to ${
-          parsed.value ? 'AUTO' : 'MANUAL'
-        }`,
-      );
-    }
   } catch (err) {
     console.error('Error parsing message:', err);
   }
@@ -79,12 +67,10 @@ setInterval(() => {
     type: 'SENSOR_INFO',
     esp_id,
     value: {
-      temperature: Math.floor(Math.random() * 40), // °C
-      humidity: Math.floor(Math.random() * 100), // %
-      soil_moisture: soilMoistureStatus, // true/false status
-      soil_moisture_value: Math.floor(Math.random() * 100), // percentage
-      gas_value: Math.floor(Math.random() * 100), // ppm or custom unit
-      water_level: Math.floor(Math.random() * 100), // percentage or cm
+      gas_value: Math.floor(Math.random() * 100),
+      humidity: Math.floor(Math.random() * 100),
+      soil_moisture: soilMoistureStatus,
+      temperature: Math.floor(Math.random() * 40),
     },
   };
 
@@ -103,7 +89,7 @@ setInterval(() => {
   const motionMessage = {
     type: 'MOTION_DETECTED',
     esp_id: esp_id,
-    value: false,
+    value: motionDetected,
   };
 
   espWs.send(JSON.stringify(motionMessage));

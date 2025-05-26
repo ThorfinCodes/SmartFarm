@@ -96,7 +96,7 @@ async function startServer() {
     ws.on('message', message => {
       try {
         const parsed = JSON.parse(message);
-
+        console.log(parsed);
         if (parsed.type === 'REGISTER') {
           const uid = parsed.uid;
           if (uid) {
@@ -235,13 +235,13 @@ async function startServer() {
 
             espSocket.send(
               JSON.stringify({
-                type: 'SET_FAN_MODE',
-                mode: isAuto,
+                type: 'SET_FAN_AUTO',
+                value: isAuto,
               }),
             );
 
             console.log(
-              `Sent SET_FAN_MODE (${
+              `Sent SET_FAN_AUTO (${
                 isAuto ? 'AUTO' : 'MANUAL'
               }) to ESP ID ${espId} for UID ${uid}`,
             );
@@ -253,8 +253,7 @@ async function startServer() {
         }
         // Handle SENSOR_INFO updates from ESP
         if (parsed.type === 'SENSOR_INFO') {
-          console.log('message parsed:', parsed);
-
+          console.log(parsed);
           const senderEspId = parsed.esp_id;
           let ownerUid = null;
           for (const uid in clientRegistry) {
@@ -275,7 +274,7 @@ async function startServer() {
             // Only send thresholds once per ESP connection
             if (!clientRegistry[ownerUid].esps[senderEspId].thresholdSent) {
               if (ws.readyState === WebSocket.OPEN) {
-                console.log('esp connected');
+                console.log('esp connected ', parsed.esp_id);
                 ws.send(
                   JSON.stringify({
                     type: 'THRESHOLDS',
@@ -287,7 +286,7 @@ async function startServer() {
                     },
                   }),
                 );
-                console.log(`Sent thresholds to ESP ID ${senderEspId}`);
+
                 clientRegistry[ownerUid].esps[senderEspId].thresholdSent = true;
               }
             }
@@ -297,9 +296,25 @@ async function startServer() {
             temperature: safeFloor(parsed.value?.temperature),
             humidity: safeFloor(parsed.value?.humidity),
             soil_moisture: parsed.value?.soil_moisture === true ? 50 : 0,
+            soil_moisture_value: safeFloor(parsed.value?.soil_moisture_value),
             gas_value: safeFloor(parsed.value?.gas_value),
+            water_level: safeFloor(parsed.value?.water_level),
           };
-          console.log('message from esp ', senderEspId, ':', flooredSensorData);
+          // 🚨 Low water level alert
+          /*if (ownerUid && flooredSensorData.water_level < WATER_THRESHOLD) {
+            const ownerSocket = clientRegistry[ownerUid]?.socket;
+            if (ownerSocket && ownerSocket.readyState === WebSocket.OPEN) {
+              const alertMessage = {
+                type: 'ALERT',
+                alerts: [
+                  `🚰 Water level is below 500 in device ${senderEspId}. Please refill your water tank.`,
+                ],
+              };
+
+              ownerSocket.send(JSON.stringify(alertMessage));
+              console.log(`🚨 Sent low water alert to UID ${ownerUid}`);
+            }
+          }*/
           // Save per ESP into history
           if (!sensorDataHistory[senderEspId]) {
             sensorDataHistory[senderEspId] = [];
@@ -578,6 +593,54 @@ app.post('/add-zone', async (req, res) => {
       .json({success: false, message: 'Internal server error'});
   }
 });
+app.post('/delete-zone', async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('Invalid or missing token');
+    return res
+      .status(401)
+      .json({success: false, message: 'Missing or invalid token'});
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  const {uid, zoneId} = req.body;
+
+  if (!uid || !zoneId) {
+    return res
+      .status(400)
+      .json({success: false, message: 'UID and zoneId are required'});
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    if (decodedToken.uid !== uid) {
+      return res.status(403).json({success: false, message: 'UID mismatch'});
+    }
+
+    const zoneRef = admin.database().ref(`users/${uid}/zones/${zoneId}`);
+
+    const zoneSnapshot = await zoneRef.once('value');
+    if (!zoneSnapshot.exists()) {
+      return res.status(404).json({success: false, message: 'Zone not found'});
+    }
+
+    // Delete the zone and all its children (subzones etc.)
+    await zoneRef.remove();
+
+    console.log(`Zone ${zoneId} deleted for user ${uid}`);
+
+    return res
+      .status(200)
+      .json({success: true, message: 'Zone deleted successfully'});
+  } catch (err) {
+    console.error('Error deleting zone:', err);
+    return res
+      .status(500)
+      .json({success: false, message: 'Internal server error'});
+  }
+});
 app.post('/add-subzone', async (req, res) => {
   const authHeader = req.headers.authorization;
 
@@ -636,11 +699,30 @@ app.post('/add-subzone', async (req, res) => {
     }
 
     if (productData.owner) {
-      const message =
-        productData.owner === uid
-          ? 'You already used this ESP in another subzone.'
-          : 'ESP already owned by someone else';
-      return res.status(403).json({success: false, message});
+      if (productData.owner !== uid) {
+        // Owned by someone else: reject immediately
+        return res
+          .status(403)
+          .json({success: false, message: 'ESP already owned by someone else'});
+      }
+
+      // Owned by same user: check if espId already assigned in user's subzones
+      const subzonesSnapshot = await zoneRef.child('subzones').once('value');
+      const subzones = subzonesSnapshot.val() || {};
+
+      // Check if any subzone already has this espId
+      const espAlreadyAssigned = Object.values(subzones).some(
+        subzone => subzone.espId === espId,
+      );
+
+      if (espAlreadyAssigned) {
+        return res.status(403).json({
+          success: false,
+          message: 'You already used this ESP in another subzone.',
+        });
+      }
+
+      // If not assigned, allow reassignment: proceed without error
     }
 
     // Assign ESP to user if not owned or already owned by this user
@@ -668,7 +750,7 @@ app.post('/add-subzone', async (req, res) => {
     // Otherwise, link it
     clientRegistry[uid].esps.push(espId);
     // ----- CLIENT REGISTRY UPDATE ENDS HERE -----
-
+    console.log('added an esp:', clientRegistry[uid].esps);
     return res.status(200).json({
       success: true,
       message: `Subzone added successfully. ESP ${espId} assigned.`,
@@ -681,13 +763,123 @@ app.post('/add-subzone', async (req, res) => {
       .json({success: false, message: 'Internal server error'});
   }
 });
+app.post('/delete-subzone', async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res
+      .status(401)
+      .json({success: false, message: 'Missing or invalid token'});
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  const {uid, zoneId, espId} = req.body;
+
+  if (!uid || !zoneId || !espId) {
+    return res.status(400).json({
+      success: false,
+      message: 'UID, zoneId, and espId are required',
+    });
+  }
+
+  try {
+    // Verify token
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    if (decodedToken.uid !== uid) {
+      return res.status(403).json({success: false, message: 'UID mismatch'});
+    }
+
+    // Check user exists
+    const userRef = admin.database().ref(`users/${uid}`);
+    const userSnapshot = await userRef.once('value');
+    if (!userSnapshot.exists()) {
+      return res.status(404).json({success: false, message: 'User not found'});
+    }
+
+    // Check zone exists
+    const zoneRef = userRef.child(`zones/${zoneId}`);
+    const zoneSnapshot = await zoneRef.once('value');
+    if (!zoneSnapshot.exists()) {
+      return res.status(404).json({success: false, message: 'Zone not found'});
+    }
+
+    // Check product ownership
+    const productRef = admin.database().ref(`products/${espId}`);
+    const productSnapshot = await productRef.once('value');
+    if (!productSnapshot.exists()) {
+      return res.status(404).json({success: false, message: 'ESP not found'});
+    }
+
+    const productData = productSnapshot.val();
+    if (productData.owner !== uid) {
+      return res
+        .status(403)
+        .json({success: false, message: 'You are not the owner of this ESP'});
+    }
+
+    // Find the subzone key by espId in user's zone subzones
+    const subzonesRef = zoneRef.child('subzones');
+    const subzonesSnapshot = await subzonesRef.once('value');
+    if (!subzonesSnapshot.exists()) {
+      return res
+        .status(404)
+        .json({success: false, message: 'No subzones found'});
+    }
+
+    // Find subzone key with matching espId
+    let subzoneKeyToDelete = null;
+    subzonesSnapshot.forEach(childSnap => {
+      if (childSnap.val().espId === espId) {
+        subzoneKeyToDelete = childSnap.key;
+        return true; // break loop
+      }
+    });
+
+    if (!subzoneKeyToDelete) {
+      return res
+        .status(404)
+        .json({success: false, message: 'Subzone with this ESP not found'});
+    }
+
+    // Remove the subzone
+    await subzonesRef.child(subzoneKeyToDelete).remove();
+
+    // Remove espId from clientRegistry
+    if (clientRegistry[uid]) {
+      clientRegistry[uid].esps = clientRegistry[uid].esps.filter(
+        id => id !== espId,
+      );
+    }
+
+    console.log(
+      `Deleted subzone ${subzoneKeyToDelete} and removed ESP ${espId} for user ${uid}`,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Subzone deleted successfully',
+      subzoneId: subzoneKeyToDelete,
+    });
+  } catch (err) {
+    console.error('Error deleting subzone:', err);
+    return res
+      .status(500)
+      .json({success: false, message: 'Internal server error'});
+  }
+});
 
 app.get('/simulate-data', async (req, res) => {
   console.log('Full req.query:', req.query);
   const {sensor, espId} = req.query;
   console.log('Received request for sensor:', sensor, 'from ESP:', espId);
 
-  const validTypes = ['temperature', 'humidity', 'gas_value', 'soil_moisture'];
+  const validTypes = [
+    'temperature',
+    'humidity',
+    'gas_value',
+    'soil_moisture_value',
+    'water_level',
+  ];
   if (!validTypes.includes(sensor)) {
     console.log('Invalid sensor type requested');
     return res.send({error: 'Invalid sensor type requested'});
@@ -763,7 +955,33 @@ async function createInitialProductsIfNeeded() {
   console.log('Generating initial products...');
   const newProducts = {};
 
-  for (let i = 0; i < 10; i++) {
+  // Add the first product with fixed ID
+  newProducts['YCGU72C6'] = {
+    id: 'YCGU72C6',
+    name: 'ESP32 DevKit V1',
+    category: 'microcontroller',
+    price: 12.99,
+    originalPrice: 15.99,
+    description: 'Carte de développement ESP32 avec WiFi et Bluetooth intégrés',
+    shortDescription: 'Carte ESP32 avec WiFi/Bluetooth',
+    specs: {
+      Processeur: 'Dual-core 32-bit LX6',
+      Fréquence: '240 MHz',
+      WiFi: '802.11 b/g/n',
+      Bluetooth: '4.2 BR/EDR et BLE',
+      GPIO: '38 pins',
+      Flash: '4 MB',
+      Tension: '3.3V',
+    },
+    fullDescription:
+      'La carte de développement ESP32 DevKit V1 est une plateforme idéale pour prototyper vos projets IoT. Avec son processeur dual-core, sa connectivité WiFi et Bluetooth intégrée, et ses nombreuses entrées/sorties, cette carte est parfaite pour les applications de smart farming.',
+    sold: false,
+    owner: null,
+    activated: false,
+  };
+
+  // Generate 9 more products with random IDs
+  for (let i = 0; i < 9; i++) {
     let newId;
     do {
       newId = generateId(8);

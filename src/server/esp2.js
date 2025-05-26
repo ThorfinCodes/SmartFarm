@@ -7,7 +7,7 @@ const espWs = new WebSocket('ws://192.168.1.34:3000');
 let pumpEnabled = false;
 let motionDetectorEnabled = false;
 
-const esp_id = 'A7GFNUCK';
+const esp_id = 'BGBYFDGI';
 
 console.log(`Initial Pump Status: ${pumpEnabled ? 'ON' : 'OFF'}`);
 console.log(

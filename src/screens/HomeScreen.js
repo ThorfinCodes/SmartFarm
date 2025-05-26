@@ -18,13 +18,13 @@ import ArrowAwjaOrange from '../icones/ArrowAwjaOrange.svg';
 import ArrowAwjaMauve from '../icones/ArrowAwjaMauve.svg';
 import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation, useRoute} from '@react-navigation/native';
-
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {RFValue} from 'react-native-responsive-fontsize';
 import {Dimensions} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
-  const [autoMode, setAutoMode] = useState(false);
+  const [autoMode, setAutoMode] = useState(true);
   const navigation = useNavigation();
   const route = useRoute();
   const espId = route.params?.espId;
@@ -140,12 +140,26 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
       <View style={styles.Bento1}>
         <View style={styles.Bento1Left}>
           <View style={styles.Bento1LeftTop}>
-            <Image
-              source={require('../images/avatar.png')}
-              style={styles.imageBento1LeftTop}
-            />
-            <View style={styles.TransparentIcone}>
-              <FontAwesome name="power-off" size={30} color="red" />
+            <View
+              style={{
+                width: 70, // adjust size
+                height: 70,
+                borderRadius: 35, // half of width/height
+                borderWidth: 1,
+                borderColor: '#5a5a5a', // or black, green, etc.
+                backgroundColor: '#1c1c1c', // optional contrast background
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+              <Image
+                source={require('../images/LogoFarmus.png')}
+                style={{
+                  width: 50, // smaller than container
+                  height: 50,
+                  borderRadius: 25, // also half
+                  resizeMode: 'contain',
+                }}
+              />
             </View>
           </View>
           <Text style={{...styles.WelcomeText, fontFamily: 'Poppins-Medium'}}>
@@ -164,15 +178,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
           <View style={styles.GreenText}>
             <Text
               style={{fontSize: RFValue(18), fontFamily: 'Poppins-SemiBold'}}>
-              Arrosage
-            </Text>
-            <Text
-              style={{
-                fontSize: RFValue(18),
-                fontFamily: 'Poppins-Light',
-                lineHeight: 20,
-              }}>
-              1h System on
+              watering
             </Text>
           </View>
           <View style={styles.SwintchContainer}>
@@ -247,12 +253,21 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
           </View>
 
           <View style={styles.Bento2Right}>
-            <View style={{...styles.BtnArrowDroit, backgroundColor: 'black'}}>
-              <ArrowDroite />
-            </View>
-            <View style={styles.BtnArrowDroit}>
-              <ArrowDown color="white" />
-            </View>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('Graph', {
+                  text: 'temperature',
+                  espId: espId,
+                })
+              }
+              style={{
+                ...styles.BtnArrowDroit,
+                backgroundColor: 'black',
+                marginLeft: '40%',
+                marginBottom: 10,
+              }}>
+              <ArrowAwjaDown color="white" />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -261,12 +276,12 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
           <View style={styles.Bento3LeftTop}>
             <View
               style={{...styles.TransparentIcone, backgroundColor: 'white'}}>
-              <FontAwesome5 name="temperature-low" size={30} color="#8000FF" />
+              <Icon name="cup-water" size={30} color="#8000FF" />
             </View>
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate('Graph', {
-                  text: 'Temperature',
+                  text: 'water_level',
                   espId: espId,
                 })
               }
@@ -282,7 +297,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontSize: RFValue(18),
                 letterSpacing: 0.2,
               }}>
-              Température
+              Water Level
             </Text>
             <Text
               style={{
@@ -290,10 +305,11 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {data.temperature ? data.temperature : 'Loading...'}°C
+              {data.waterLevel ?? 'Loading...'}
             </Text>
           </View>
         </View>
+
         <View style={styles.Bento3Right}>
           <View>
             <Text
@@ -311,17 +327,24 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {data.soilMoisture === 50
-                ? 'Wet'
-                : data.soilMoisture === 0
-                ? 'Dry'
+              {data.soilMoistureValue
+                ? data.soilMoistureValue + ' %'
                 : 'Loading...'}
+            </Text>
+            <Text
+              style={{
+                color: 'white',
+                fontFamily: 'Poppins-Regular',
+                fontSize: RFValue(16),
+                marginTop: 4,
+              }}>
+              {data.soilMoisture == 0 ? 'Wet' : 'Dry'}
             </Text>
           </View>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('Graph', {
-                text: 'soil_moisture',
+                text: 'soil_moisture_value',
                 espId: espId,
               })
             }
@@ -352,7 +375,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {data.gasValue ? `${data.gasValue} ppm` : 'Loading...'}
+              {data.gasValue ? `${data.gasValue} ` : 'Loading...'}
             </Text>
           </View>
           <TouchableOpacity
@@ -379,7 +402,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
             <TouchableOpacity
               onPress={() =>
                 navigation.navigate('Graph', {
-                  text: 'Humidity',
+                  text: 'humidity',
                   espId: espId,
                 })
               }
@@ -395,7 +418,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontSize: RFValue(18),
                 letterSpacing: 0.2,
               }}>
-              Humidité
+              Humidity
             </Text>
             <Text
               style={{
@@ -403,7 +426,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontFamily: 'Poppins-Medium',
                 fontSize: RFValue(18),
               }}>
-              {data.humidity ? data.humidity : 'Loading...'} g/m³
+              {data.humidity ? data.humidity + ' %' : 'Loading...'}
             </Text>
           </View>
         </View>
@@ -474,8 +497,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 50,
-    width: (screenWidth * 19.4) / 100,
-    height: (screenWidth * 19.4) / 100,
+    width: (screenWidth * 17.4) / 100,
+    height: (screenWidth * 17.4) / 100,
   },
   WelcomeText: {
     color: 'white',
@@ -509,7 +532,7 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   SwintchContainer: {
-    marginLeft: (screenWidth * 20.5) / 100,
+    marginLeft: (screenWidth * 3.5) / 100,
   },
   Bento2Container: {
     paddingLeft: (screenWidth * 3.3) / 100,
@@ -535,7 +558,7 @@ const styles = StyleSheet.create({
     height: '100%',
     width: (screenWidth * 37) / 100,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     gap: (screenHeight * 2) / 100,
   },
   BtnArrowDroit: {

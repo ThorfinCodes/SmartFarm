@@ -14,13 +14,12 @@ const GraphScreen = ({espData}) => {
   const [graphs, setGraphs] = useState([]);
   const [labels, setLabels] = useState([]);
   const [delta, setDelta] = useState();
-  const [currentIndex, setCurrentIndex] = useState(0);
 
   const route = useRoute();
   const {text, espId} = route.params;
   const simpleData = espData[espId] || {};
   const sensorData = {
-    Temperature: {
+    temperature: {
       name: 'Temperature',
       value:
         typeof simpleData.temperature === 'number' &&
@@ -29,7 +28,7 @@ const GraphScreen = ({espData}) => {
           : 'N/A',
       unit: '°C',
     },
-    Humidity: {
+    humidity: {
       name: 'Humidity',
       value:
         typeof simpleData.humidity === 'number' && !isNaN(simpleData.humidity)
@@ -37,23 +36,31 @@ const GraphScreen = ({espData}) => {
           : 'N/A',
       unit: '%',
     },
-    soil_moisture: {
-      name: 'Soil Moisture',
-      value:
-        simpleData.soilMoisture === 50
-          ? 'Wet'
-          : simpleData.soilMoisture === 0
-          ? 'Dry'
-          : 'N/A',
-      unit: '',
-    },
     gas_value: {
       name: 'Gas',
       value:
         typeof simpleData.gasValue === 'number' && !isNaN(simpleData.gasValue)
           ? simpleData.gasValue.toFixed(1)
           : 'N/A',
-      unit: 'ppm',
+      unit: '',
+    },
+    soil_moisture_value: {
+      name: 'Soil Moisture',
+      value:
+        typeof simpleData.soilMoistureValue === 'number' &&
+        !isNaN(simpleData.soilMoistureValue)
+          ? simpleData.soilMoistureValue
+          : 'N/A',
+      unit: '%',
+    },
+    water_level: {
+      name: 'Water Level',
+      value:
+        typeof simpleData.waterLevel === 'number' &&
+        !isNaN(simpleData.waterLevel)
+          ? simpleData.waterLevel.toFixed(1)
+          : 'N/A',
+      unit: '', // or '' if it's a level status (adjust based on your actual logic)
     },
   };
 
@@ -62,9 +69,7 @@ const GraphScreen = ({espData}) => {
     value: 'N/A',
     unit: '',
   };
-  console.log('esp data:', simpleData);
-  console.log('esp id:', espId);
-  console.log('data:', selectedSensor);
+  console.log(text);
   useEffect(() => {
     const sensor = text?.toLowerCase();
     if (!sensor) return;

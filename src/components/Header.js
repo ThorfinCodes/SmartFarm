@@ -16,7 +16,7 @@ const Header = ({title, sensorDetails, delta}) => {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../images/avatar.png')}
+        source={require('../images/LogoFarmus.png')}
         style={styles.image}
         resizeMode="contain"
       />
@@ -54,6 +54,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
+    backgroundColor: 'black',
   },
   values: {
     marginTop: 50,

@@ -14,6 +14,9 @@ import ArrowAwjaDown from '../icones/ArrowAwjaDown.svg';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ADD_ZONE_URL} from '@env';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {ToastAndroid, Platform} from 'react-native';
+import {DELETE_ZONE_URL} from '@env';
 const UserStuff = props => {
   const [zoneName, setZoneName] = useState('');
   const [zoneFocused, setZoneFocused] = useState(false);
@@ -27,9 +30,48 @@ const UserStuff = props => {
   const {username: propUsername, zones, setZones} = props;
 
   const username = routeUsername || propUsername;
-
+  console.log(DELETE_ZONE_URL);
   const zoneUnderline = useState(new Animated.Value(1))[0];
+  const handleDelete = async zoneId => {
+    if (!zoneId) {
+      ToastAndroid.show('Zone ID is required.', ToastAndroid.SHORT);
+      return;
+    }
 
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const uid = await AsyncStorage.getItem('uid');
+
+      if (!token || !uid) {
+        ToastAndroid.show('Missing token or uid', ToastAndroid.SHORT);
+        return;
+      }
+
+      const response = await fetch(DELETE_ZONE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({uid, zoneId}),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setZones(prevZones => prevZones.filter(zone => zone.zoneId !== zoneId));
+        ToastAndroid.show('Zone deleted successfully.', ToastAndroid.SHORT);
+      } else {
+        ToastAndroid.show(
+          data.message || 'Failed to delete zone.',
+          ToastAndroid.SHORT,
+        );
+      }
+    } catch (error) {
+      console.error('Error deleting zone:', error);
+      ToastAndroid.show('Error deleting zone.', ToastAndroid.SHORT);
+    }
+  };
   const handleFocus = () => {
     setZoneFocused(true);
     Animated.timing(zoneUnderline, {
@@ -75,7 +117,11 @@ const UserStuff = props => {
           const data = await response.json();
           console.log('Zone added on server:', data);
 
-          // **Use the passed setZones to update the global zones state**
+          // Show success toast (Android only)
+          if (Platform.OS === 'android') {
+            ToastAndroid.show('Zone added successfully!', ToastAndroid.SHORT);
+          }
+
           setZones([
             ...zones,
             {name: zoneName, color: selectedColor, zoneId: data.zoneId},
@@ -85,6 +131,12 @@ const UserStuff = props => {
           setSelectedColor(null);
           setIsModalVisible(false);
         } else {
+          const errorText = await response.text();
+
+          // Show error toast (Android only)
+          if (Platform.OS === 'android') {
+            ToastAndroid.show(`Server error: ${errorText}`, ToastAndroid.LONG);
+          }
           console.error('Server error:', response.statusText);
         }
       } catch (error) {
@@ -95,9 +147,12 @@ const UserStuff = props => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.headerTitleContainer}>
+        <Text style={styles.headerTitle}>Zone Management</Text>
+      </View>
       <View style={styles.Top}>
         <View style={styles.TopText}>
-          <Text style={styles.title}>Hello,</Text>
+          <Text style={styles.title}>Hello, </Text>
           <Text style={styles.title}>{username}</Text>
         </View>
         <TouchableOpacity
@@ -112,17 +167,59 @@ const UserStuff = props => {
           data={zones}
           keyExtractor={item => item.zoneId.toString()}
           renderItem={({item}) => (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('MySubzone', {zoneId: item.zoneId})
-              }>
-              <View style={[styles.Zone, {backgroundColor: item.color}]}>
+            <View style={[styles.Zone, {backgroundColor: item.color}]}>
+              <View style={styles.zoneHeader}>
                 <Text style={styles.zoneText}>{item.name}</Text>
-                <View style={styles.BtnZone}>
-                  <ArrowAwjaDown color="white" />
+                <View style={styles.subzoneCountBadge}>
+                  <Text style={styles.subzoneCountText}>
+                    {item.subzones ? item.subzones.length : 0}
+                  </Text>
+                  <Icon
+                    name="leaf"
+                    size={16}
+                    color="white"
+                    style={styles.subzoneIcon}
+                  />
                 </View>
               </View>
-            </TouchableOpacity>
+              {/* Subzone names list */}
+
+              {item.subzones && item.subzones.length > 0 && (
+                <View style={styles.subzoneList}>
+                  {item.subzones.slice(0, 3).map((subzone, index) => (
+                    <View key={index} style={styles.subzoneItem}>
+                      <View
+                        style={[
+                          styles.subzoneBullet,
+                          {backgroundColor: item.color},
+                        ]}
+                      />
+                      <Text style={styles.subzoneName}>{subzone.name}</Text>
+                    </View>
+                  ))}
+                  {item.subzones.length > 3 && (
+                    <Text style={styles.moreSubzonesText}>
+                      +{item.subzones.length - 3} more...
+                    </Text>
+                  )}
+                </View>
+              )}
+              <View style={styles.BtnZoneRow}>
+                <TouchableOpacity
+                  onPress={() => handleDelete(item.zoneId)}
+                  style={styles.iconDeleteWrapper}>
+                  <Icon name="trash-can-outline" size={24} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate('MySubzone', {zoneId: item.zoneId})
+                  }>
+                  <View style={styles.iconArrowWrapper}>
+                    <ArrowAwjaDown color="white" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
         />
       </View>
@@ -137,7 +234,7 @@ const UserStuff = props => {
             <Pressable
               style={styles.closeBtn}
               onPress={() => setIsModalVisible(false)}>
-              <Text style={styles.closeText}>\u2715</Text>
+              <Text style={styles.closeText}>✕</Text>
             </Pressable>
 
             <View style={styles.TextZone}>
@@ -191,20 +288,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'black',
   },
+  headerTitleContainer: {
+    paddingHorizontal: 0,
+    paddingTop: 10,
+    paddingBottom: 0,
+  },
+  headerTitle: {
+    color: 'white',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 20,
+    alignSelf: 'center',
+  },
   Top: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 50,
+    marginBottom: 10,
   },
   TopText: {
-    flexDirection: 'column',
+    flexDirection: 'row',
   },
   AddBtn: {
     backgroundColor: 'white',
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 50,
@@ -212,7 +321,7 @@ const styles = StyleSheet.create({
   title: {
     color: 'white',
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 30,
+    fontSize: 25,
   },
   plus: {
     fontSize: 30,
@@ -225,25 +334,46 @@ const styles = StyleSheet.create({
   },
   Zone: {
     width: '100%',
-    height: 260,
+    height: 280,
     borderRadius: 15,
     padding: 20,
     justifyContent: 'space-between',
     marginBottom: 20,
+    elevation: 6, // Android
+    shadowColor: '#000', // iOS
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
   zoneText: {
     color: 'black',
     fontFamily: 'Poppins-Bold',
     fontSize: 25,
   },
-  BtnZone: {
+  BtnZoneRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+
+    gap: 10, // Adjust space between icons
+  },
+  iconArrowWrapper: {
     backgroundColor: 'black',
     height: 50,
     width: 50,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 100,
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-start',
+  },
+  iconDeleteWrapper: {
+    backgroundColor: 'black',
+    height: 50,
+    width: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 100,
+    alignSelf: 'flex-start',
   },
   modalOverlay: {
     flex: 1,
@@ -315,6 +445,75 @@ const styles = StyleSheet.create({
     color: 'black',
     fontFamily: 'Poppins-Medium',
     fontSize: 16,
+  },
+  zoneHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.2)',
+  },
+
+  subzoneCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  subzoneCountText: {
+    color: 'white',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    marginRight: 5,
+  },
+
+  subzoneIcon: {
+    marginLeft: 3,
+  },
+
+  subzoneList: {
+    flex: 1,
+    justifyContent: 'center',
+    marginVertical: 8,
+    marginBottom: 45,
+  },
+
+  subzoneItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+
+  subzoneBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+    opacity: 0.8,
+  },
+
+  subzoneName: {
+    color: 'black',
+    fontFamily: 'Poppins-Medium',
+    fontSize: 15,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 8,
+    flex: 1,
+  },
+
+  moreSubzonesText: {
+    color: 'black',
+    fontFamily: 'Poppins-Italic',
+    fontSize: 13,
+    marginTop: 4,
+    alignSelf: 'center',
   },
 });
 export default UserStuff;

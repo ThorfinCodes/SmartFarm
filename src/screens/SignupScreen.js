@@ -127,7 +127,7 @@ const SignupScreen = () => {
         // 🧠 Save token + uid to AsyncStorage
         await AsyncStorage.setItem('userToken', data.token);
         await AsyncStorage.setItem('uid', data.uid);
-
+        await AsyncStorage.setItem('username', username);
         navigation.navigate('MyStuff', {username});
       } else {
         setError(data.message || 'An error occurred during signup.');
