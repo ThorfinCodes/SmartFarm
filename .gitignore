@@ -1,5 +1,6 @@
 # OSX
 #
+.env
 .DS_Store
 src/server/serviceAccountKey.json
 # Xcode
