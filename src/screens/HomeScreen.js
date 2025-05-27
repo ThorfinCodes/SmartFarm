@@ -163,7 +163,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
             </View>
           </View>
           <Text style={{...styles.WelcomeText, fontFamily: 'Poppins-Medium'}}>
-            Welcome to the farm
+            Bienvenue à la ferme
           </Text>
         </View>
         <View style={styles.Bento1Right}>
@@ -178,7 +178,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
           <View style={styles.GreenText}>
             <Text
               style={{fontSize: RFValue(18), fontFamily: 'Poppins-SemiBold'}}>
-              watering
+              arrosage
             </Text>
           </View>
           <View style={styles.SwintchContainer}>
@@ -197,7 +197,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
           <View style={styles.Bento2Left}>
             <Text
               style={{fontFamily: 'Poppins-SemiBold', fontSize: RFValue(24)}}>
-              Air Conditioner
+              Climatisation
             </Text>
 
             {data.temperature != null ? (
@@ -211,31 +211,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 style={{padding: 26}}
               />
             )}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 8,
-                marginBottom: 8,
-              }}>
-              <TouchableOpacity
-                onPress={handleAirModeToggle}
-                style={{
-                  backgroundColor: autoMode ? '#4CAF50' : '#ccc',
-                  paddingVertical: 6,
-                  paddingHorizontal: 14,
-                  borderRadius: 20,
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontFamily: 'Poppins-Bold',
-                    fontSize: RFValue(14),
-                  }}>
-                  {autoMode ? 'Auto' : 'Manual'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+
             <TouchableWithoutFeedback
               disabled={!autoMode} // disables this blocking layer if manual
               onPress={() => {}} // capture touches and do nothing
@@ -297,7 +273,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontSize: RFValue(18),
                 letterSpacing: 0.2,
               }}>
-              Water Level
+              Niveau d'eau
             </Text>
             <Text
               style={{
@@ -319,7 +295,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontSize: RFValue(18),
                 letterSpacing: 0.3,
               }}>
-              Soil Moisture
+              Humidité du sol
             </Text>
             <Text
               style={{
@@ -338,7 +314,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontSize: RFValue(16),
                 marginTop: 4,
               }}>
-              {data.soilMoisture == 0 ? 'Wet' : 'Dry'}
+              {data.soilMoisture == 0 ? 'Humide' : 'Sec'}
             </Text>
           </View>
           <TouchableOpacity
@@ -367,7 +343,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontSize: RFValue(18),
                 letterSpacing: 0.3,
               }}>
-              Gas value
+              Valeur du gaz
             </Text>
             <Text
               style={{
@@ -418,7 +394,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
                 fontSize: RFValue(18),
                 letterSpacing: 0.2,
               }}>
-              Humidity
+              Humidité
             </Text>
             <Text
               style={{
@@ -433,7 +409,7 @@ const HomeScreen = ({espData, isArrosageEnabled, socketRef}) => {
       </View>
       <View style={styles.MotionDetectorContainer}>
         <View style={styles.MotionDetectorBox}>
-          <Text style={styles.MotionDetectorTitle}>Motion Detector</Text>
+          <Text style={styles.MotionDetectorTitle}>Détecteur de mouvement</Text>
           <RNSwitch
             value={isMotionDetectorEnabled}
             handleOnPress={handleMotionSwitchToggle}

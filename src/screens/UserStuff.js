@@ -34,7 +34,10 @@ const UserStuff = props => {
   const zoneUnderline = useState(new Animated.Value(1))[0];
   const handleDelete = async zoneId => {
     if (!zoneId) {
-      ToastAndroid.show('Zone ID is required.', ToastAndroid.SHORT);
+      ToastAndroid.show(
+        "L'identifiant de la zone est requis.",
+        ToastAndroid.SHORT,
+      );
       return;
     }
 
@@ -43,7 +46,10 @@ const UserStuff = props => {
       const uid = await AsyncStorage.getItem('uid');
 
       if (!token || !uid) {
-        ToastAndroid.show('Missing token or uid', ToastAndroid.SHORT);
+        ToastAndroid.show(
+          'Jeton ou identifiant utilisateur manquant.',
+          ToastAndroid.SHORT,
+        );
         return;
       }
 
@@ -60,16 +66,19 @@ const UserStuff = props => {
 
       if (response.ok && data.success) {
         setZones(prevZones => prevZones.filter(zone => zone.zoneId !== zoneId));
-        ToastAndroid.show('Zone deleted successfully.', ToastAndroid.SHORT);
+        ToastAndroid.show('Zone supprimée avec succès.', ToastAndroid.SHORT);
       } else {
         ToastAndroid.show(
-          data.message || 'Failed to delete zone.',
+          data.message || 'Échec de la suppression de la zone.',
           ToastAndroid.SHORT,
         );
       }
     } catch (error) {
       console.error('Error deleting zone:', error);
-      ToastAndroid.show('Error deleting zone.', ToastAndroid.SHORT);
+      ToastAndroid.show(
+        'Erreur lors de la suppression de la zone.',
+        ToastAndroid.SHORT,
+      );
     }
   };
   const handleFocus = () => {
@@ -119,7 +128,7 @@ const UserStuff = props => {
 
           // Show success toast (Android only)
           if (Platform.OS === 'android') {
-            ToastAndroid.show('Zone added successfully!', ToastAndroid.SHORT);
+            ToastAndroid.show('Zone ajoutée avec succès !', ToastAndroid.SHORT);
           }
 
           setZones([
@@ -148,11 +157,11 @@ const UserStuff = props => {
   return (
     <View style={styles.container}>
       <View style={styles.headerTitleContainer}>
-        <Text style={styles.headerTitle}>Zone Management</Text>
+        <Text style={styles.headerTitle}>Gestion des Zones</Text>
       </View>
       <View style={styles.Top}>
         <View style={styles.TopText}>
-          <Text style={styles.title}>Hello, </Text>
+          <Text style={styles.title}>Bonjour, </Text>
           <Text style={styles.title}>{username}</Text>
         </View>
         <TouchableOpacity
@@ -199,7 +208,7 @@ const UserStuff = props => {
                   ))}
                   {item.subzones.length > 3 && (
                     <Text style={styles.moreSubzonesText}>
-                      +{item.subzones.length - 3} more...
+                      +{item.subzones.length - 3} de plus...
                     </Text>
                   )}
                 </View>

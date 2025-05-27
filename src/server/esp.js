@@ -10,9 +10,9 @@ const espWs = new WebSocket('wss://tulip-half-dormouse.glitch.me', {
 });
 // State variables for pump and motion detector
 let pumpEnabled = false;
-let motionDetectorEnabled = false;
+let motionDetectorEnabled = true;
 
-const esp_id = 'GGKZ9QFE';
+const esp_id = 'YCGU72C6';
 
 console.log(`Initial Pump Status: ${pumpEnabled ? 'ON' : 'OFF'}`);
 console.log(
@@ -79,12 +79,12 @@ setInterval(() => {
     type: 'SENSOR_INFO',
     esp_id,
     value: {
-      temperature: Math.floor(Math.random() * 40), // °C
-      humidity: Math.floor(Math.random() * 100), // %
+      temperature: 50, // °C
+      humidity: 20, // %
       soil_moisture: soilMoistureStatus, // true/false status
       soil_moisture_value: Math.floor(Math.random() * 100), // percentage
-      gas_value: Math.floor(Math.random() * 100), // ppm or custom unit
-      water_level: Math.floor(Math.random() * 100), // percentage or cm
+      gas_value: 3001, // ppm or custom unit
+      water_level: 449, // percentage or cm
     },
   };
 
@@ -98,12 +98,12 @@ setInterval(() => {
   if (!motionDetectorEnabled || espWs.readyState !== WebSocket.OPEN) return;
 
   // Random chance to flip value (simulate motion)
-  const motionDetected = Math.random() < 0.1; // 10% chance of motion
+  const motionDetected = Math.random() < 0.5; // 10% chance of motion
 
   const motionMessage = {
     type: 'MOTION_DETECTED',
     esp_id: esp_id,
-    value: false,
+    value: true,
   };
 
   espWs.send(JSON.stringify(motionMessage));

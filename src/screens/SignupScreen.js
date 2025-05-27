@@ -15,6 +15,7 @@ import {useNavigation} from '@react-navigation/native';
 import {RFValue} from 'react-native-responsive-fontsize';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {SIGNUP_URL} from '@env';
+import {ToastAndroid, Platform} from 'react-native';
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 const SignupScreen = () => {
   const [email, setEmail] = useState('');
@@ -124,11 +125,15 @@ const SignupScreen = () => {
       if (data.success) {
         console.log('Signup successful!');
 
-        // 🧠 Save token + uid to AsyncStorage
         await AsyncStorage.setItem('userToken', data.token);
         await AsyncStorage.setItem('uid', data.uid);
         await AsyncStorage.setItem('username', username);
-        navigation.navigate('MyStuff', {username});
+
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('Inscription réussie !', ToastAndroid.SHORT);
+        }
+
+        navigation.navigate('Identification');
       } else {
         setError(data.message || 'An error occurred during signup.');
       }

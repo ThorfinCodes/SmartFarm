@@ -27,7 +27,7 @@ const App = () => {
 
   const socketRef = useRef(null);
   const [espData, setEspData] = useState({});
-  let lastAlertTime = Date.now(); // To track time of the last alert
+  let lastAlertTime = 0; // To track time of the last alert
 
   // Load the sound file
   const alertSound = new Sound(
@@ -151,16 +151,16 @@ const App = () => {
           setIsArrosageEnabled(data.value);
         } else if (data.type === 'ALERT') {
           const currentTime = Date.now();
-          if (currentTime - lastAlertTime > 5000) {
+
+          // If lastAlertTime is zero (meaning first alert), or 30 seconds passed, show alert
+          if (lastAlertTime === 0 || currentTime - lastAlertTime > 30000) {
             console.log('🚨 Alerts received:', data.alerts);
 
             data.alerts.forEach(async alert => {
               console.log(alert);
 
-              // Play sound when an alert is triggered
               alertSound.play();
 
-              // Display notification
               await notifee.displayNotification({
                 title: 'Alert!',
                 body: alert,
@@ -171,6 +171,8 @@ const App = () => {
             });
 
             lastAlertTime = currentTime;
+          } else {
+            console.log('Alert received too soon, ignoring.');
           }
         }
         if (!data.espId) return; // Skip if no ESP ID (safety check)
@@ -271,6 +273,7 @@ const App = () => {
                 zones={zones}
                 setZones={setZones}
                 espData={espData}
+                socketRef={socketRef}
               />
             )}
           </Stack.Screen>

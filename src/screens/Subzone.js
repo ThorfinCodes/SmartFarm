@@ -34,14 +34,13 @@ const SubzoneItem = React.memo(
         timestamp: new Date().toISOString(),
       };
 
-      console.log('Report submitted:', reportData);
+      console.log('Rapport envoyé :', reportData);
 
-      // Close modal and reset description
       setIsReportModalVisible(false);
       setIssueDescription('');
 
       try {
-        const idToken = await AsyncStorage.getItem('userToken'); // Firebase Auth token
+        const idToken = await AsyncStorage.getItem('userToken');
 
         const response = await fetch(SUBMIT_REPORT_URL, {
           method: 'POST',
@@ -55,23 +54,24 @@ const SubzoneItem = React.memo(
         const data = await response.json();
 
         if (data.success) {
-          console.log('Report successfully sent:', data.notificationId);
+          console.log('Rapport envoyé avec succès :', data.notificationId);
           if (Platform.OS === 'android') {
-            ToastAndroid.show('Report submitted', ToastAndroid.SHORT);
+            ToastAndroid.show('Rapport envoyé', ToastAndroid.SHORT);
           }
         } else {
-          console.warn('Report failed:', data.message);
+          console.warn('Échec de l’envoi du rapport :', data.message);
           if (Platform.OS === 'android') {
-            ToastAndroid.show('Failed to submit report', ToastAndroid.SHORT);
+            ToastAndroid.show("Échec de l'envoi", ToastAndroid.SHORT);
           }
         }
       } catch (error) {
-        console.error('Error submitting report:', error);
+        console.error("Erreur lors de l'envoi du rapport :", error);
         if (Platform.OS === 'android') {
-          ToastAndroid.show('Error submitting report', ToastAndroid.SHORT);
+          ToastAndroid.show("Erreur lors de l'envoi", ToastAndroid.SHORT);
         }
       }
     };
+
     return (
       <View style={[styles.Zone, {backgroundColor: subZone.color}]}>
         <View style={styles.top}>
@@ -84,7 +84,7 @@ const SubzoneItem = React.memo(
         </View>
         {data ? (
           <View style={styles.sensorContainer}>
-            {/* First row with two items (temperature and cloud) */}
+            {/* Première ligne : température et gaz */}
             <View style={styles.sensorRow}>
               <View style={styles.sensorItem}>
                 <Icon name="thermometer" size={15} color="black" />
@@ -96,7 +96,7 @@ const SubzoneItem = React.memo(
               </View>
             </View>
 
-            {/* Second row with three items (leaf, water cup, humidity) */}
+            {/* Deuxième ligne : humidité du sol, niveau d’eau, humidité */}
             <View style={styles.sensorRow}>
               <View style={styles.sensorItem}>
                 <Icon name="leaf" size={15} color="black" />
@@ -113,7 +113,7 @@ const SubzoneItem = React.memo(
             </View>
           </View>
         ) : (
-          <Text style={styles.sensorText}>No data available</Text>
+          <Text style={styles.sensorText}>Aucune donnée disponible</Text>
         )}
         <Modal
           visible={isReportModalVisible}
@@ -122,21 +122,21 @@ const SubzoneItem = React.memo(
           onRequestClose={() => setIsReportModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.reportModal}>
-              <Text style={styles.reportTitle}>Report Issue</Text>
+              <Text style={styles.reportTitle}>Signaler un problème</Text>
 
               <View style={styles.reportInfo}>
-                <Text style={styles.reportLabel}>ESP ID:</Text>
+                <Text style={styles.reportLabel}>ID ESP :</Text>
                 <Text style={styles.reportValue}>{subZone.espId}</Text>
               </View>
 
               <View style={styles.reportInfo}>
-                <Text style={styles.reportLabel}>Name:</Text>
+                <Text style={styles.reportLabel}>Nom :</Text>
                 <Text style={styles.reportValue}>{subZone.name}</Text>
               </View>
 
               <TextInput
                 style={styles.issueInput}
-                placeholder="Describe the issue..."
+                placeholder="Décrivez le problème..."
                 placeholderTextColor="#888"
                 multiline
                 numberOfLines={4}
@@ -148,19 +148,18 @@ const SubzoneItem = React.memo(
                 <TouchableOpacity
                   style={[styles.reportButton, styles.cancelButton]}
                   onPress={() => setIsReportModalVisible(false)}>
-                  <Text style={styles.buttonText}>Cancel</Text>
+                  <Text style={styles.buttonText}>Annuler</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.reportButton, styles.submitButton]}
                   onPress={handleReportSubmit}>
-                  <Text style={styles.buttonText}>Submit</Text>
+                  <Text style={styles.buttonText}>Envoyer</Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         </Modal>
-        {/* Action Buttons */}
         <View style={styles.BtnZoneRow}>
           <TouchableOpacity
             onPress={() => onDelete(subZone.subzoneId)}
@@ -186,7 +185,8 @@ const SubzoneItem = React.memo(
     );
   },
 );
-const Subzone = ({username, route, zones, setZones, espData}) => {
+
+const Subzone = ({username, route, zones, setZones, espData, socketRef}) => {
   const navigation = useNavigation();
   const [zoneName, setZoneName] = useState('');
   const [zoneFocused, setZoneFocused] = useState(false);
@@ -213,7 +213,7 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
         console.error('Missing required delete parameters');
         if (Platform.OS === 'android') {
           ToastAndroid.show(
-            'Missing parameters for delete.',
+            'Paramètres manquants pour la suppression.',
             ToastAndroid.SHORT,
           );
         }
@@ -236,7 +236,7 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
           console.error('Failed to delete subzone:', data.message);
           if (Platform.OS === 'android') {
             ToastAndroid.show(
-              `Delete failed: ${data.message}`,
+              `Échec de la suppression : ${data.message}`,
               ToastAndroid.LONG,
             );
           }
@@ -246,7 +246,7 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
         console.log('Subzone deleted successfully:', data.subzoneId);
         if (Platform.OS === 'android') {
           ToastAndroid.show(
-            'Subzone deleted successfully!',
+            'Sous-zone supprimée avec succès !',
             ToastAndroid.SHORT,
           );
         }
@@ -266,12 +266,16 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
       } catch (error) {
         console.error('Error deleting subzone:', error);
         if (Platform.OS === 'android') {
-          ToastAndroid.show('Error deleting subzone.', ToastAndroid.LONG);
+          ToastAndroid.show(
+            'Erreur lors de la suppression de la sous-zone.',
+            ToastAndroid.LONG,
+          );
         }
       }
     },
     [zoneId, setZones],
   );
+
   const handleEspFocus = () => {
     Animated.timing(espUnderline, {
       toValue: 2,
@@ -320,7 +324,7 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
           console.warn('Missing token or uid from storage');
           if (Platform.OS === 'android') {
             ToastAndroid.show(
-              'Authentication data missing. Please login again.',
+              'Données d’authentification manquantes. Veuillez vous reconnecter.',
               ToastAndroid.LONG,
             );
           }
@@ -367,10 +371,10 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
           setEspId('');
           setSelectedColor(null);
           setIsModalVisible(false);
-
+          socketRef.current.send(JSON.stringify({type: 'REGISTER', uid}));
           if (Platform.OS === 'android') {
             ToastAndroid.show(
-              'Subzone added successfully!',
+              'Sous-zone ajoutée avec succès !',
               ToastAndroid.SHORT,
             );
           }
@@ -381,7 +385,9 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
           );
           if (Platform.OS === 'android') {
             ToastAndroid.show(
-              `Failed to add subzone: ${data.message || 'Unknown error'}`,
+              `Échec de l’ajout de la sous-zone : ${
+                data.message || 'Erreur inconnue'
+              }`,
               ToastAndroid.LONG,
             );
           }
@@ -389,14 +395,17 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
       } catch (error) {
         console.error('Error adding subzone:', error);
         if (Platform.OS === 'android') {
-          ToastAndroid.show('Error adding subzone.', ToastAndroid.LONG);
+          ToastAndroid.show(
+            'Erreur lors de l’ajout de la sous-zone.',
+            ToastAndroid.LONG,
+          );
         }
       }
     } else {
       console.warn('Please fill in all required fields.');
       if (Platform.OS === 'android') {
         ToastAndroid.show(
-          'Please fill in all required fields.',
+          'Veuillez remplir tous les champs requis.',
           ToastAndroid.SHORT,
         );
       }
@@ -406,7 +415,7 @@ const Subzone = ({username, route, zones, setZones, espData}) => {
   return (
     <View style={styles.container}>
       <View style={styles.headerTitleContainer}>
-        <Text style={styles.headerTitle}>Sub Zone Management</Text>
+        <Text style={styles.headerTitle}>Gestion des sous-zones</Text>
       </View>
 
       <View style={styles.Top}>

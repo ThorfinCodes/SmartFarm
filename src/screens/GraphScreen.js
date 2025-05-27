@@ -20,7 +20,7 @@ const GraphScreen = ({espData}) => {
   const simpleData = espData[espId] || {};
   const sensorData = {
     temperature: {
-      name: 'Temperature',
+      name: 'Température',
       value:
         typeof simpleData.temperature === 'number' &&
         !isNaN(simpleData.temperature)
@@ -29,7 +29,7 @@ const GraphScreen = ({espData}) => {
       unit: '°C',
     },
     humidity: {
-      name: 'Humidity',
+      name: 'Humidité',
       value:
         typeof simpleData.humidity === 'number' && !isNaN(simpleData.humidity)
           ? simpleData.humidity.toFixed(1)
@@ -37,7 +37,7 @@ const GraphScreen = ({espData}) => {
       unit: '%',
     },
     gas_value: {
-      name: 'Gas',
+      name: 'Gaz',
       value:
         typeof simpleData.gasValue === 'number' && !isNaN(simpleData.gasValue)
           ? simpleData.gasValue.toFixed(1)
@@ -45,7 +45,7 @@ const GraphScreen = ({espData}) => {
       unit: '',
     },
     soil_moisture_value: {
-      name: 'Soil Moisture',
+      name: 'Humidité du sol',
       value:
         typeof simpleData.soilMoistureValue === 'number' &&
         !isNaN(simpleData.soilMoistureValue)
@@ -54,13 +54,13 @@ const GraphScreen = ({espData}) => {
       unit: '%',
     },
     water_level: {
-      name: 'Water Level',
+      name: "Niveau d'eau",
       value:
         typeof simpleData.waterLevel === 'number' &&
         !isNaN(simpleData.waterLevel)
           ? simpleData.waterLevel.toFixed(1)
           : 'N/A',
-      unit: '', // or '' if it's a level status (adjust based on your actual logic)
+      unit: '',
     },
   };
 
