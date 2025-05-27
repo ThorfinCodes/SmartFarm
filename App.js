@@ -105,7 +105,6 @@ const App = () => {
             setInitialRoute('Identification');
           }
         } catch (error) {
-          console.error('Error refreshing token:', error);
           await AsyncStorage.removeItem('userToken');
           await AsyncStorage.removeItem('uid');
           setInitialRoute('Identification');
